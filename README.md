@@ -31,7 +31,7 @@ options:
 
 MUFASA takes as input a single HMMER profile and performs separate hmmsearch of all fasta files available in the same folder as where MUFASA is executed. By default, all files with extension `fsa` will be used as input sequence set and `hmm_profile` is the default HMMER profile. For each input sequence set, it fetches all identified sequences and saves them in a single fasta file, which represent a superfamily proteome. Next, all obtained superfamily proteomes are separately aligned using MAFFT G-INS-i. 
 
-![549daef20f747651332ab5b53229994c.png](:/d12e7acb7f444599a560af4971f372be)
+![image](https://user-images.githubusercontent.com/45858786/207959881-8337245d-d328-4393-bb82-ed833b87ad6e.png)
 >Table 1: Input and Output of MUFASA
 
 ### Seqrutinator
@@ -126,7 +126,8 @@ Note that MAFFT G-INS-i comes with a heavy computational cost. For very large da
 `java -jar BMGE.jar -i <msa.faa> -h 0.8`					
 
 **HMMER**[^h]. The outlier removers use HMMER modules⁠ with the following commands:
-`hmmbuild --informat afa --amino <output.hmm> <input.faa>`	`hmmsearch --noali –tblout <output.txt> <input.fsa>`
+`hmmbuild --informat afa --amino <output.hmm> <input.faa>`	
+`hmmsearch --noali –tblout <output.txt> <input.fsa>`
 
 
 
