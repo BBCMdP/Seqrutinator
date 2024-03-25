@@ -4,7 +4,7 @@
 
 Seqrutinator is an objective, flexible pipeline for the scrutiny of sequence sets from complex, eukaryotic protein superfamilies. It removes sequences from pseudogenes, incorrect gene models or with sequencing errors. Testing Seqrutinator on major superfamilies BAHD, CYP and UGT correctly removed 1.94% of SwissProt entries, 14% of entries from the model plant _Arabidopsis thaliana_ but 80% of entries from _Pinus taeda_’s recent complete proteome. Most of the removed sequences were partial. The scrutiny of BAHDomes, CYPomes and UGTomes obtained from 16 plant proteomes show consistent numbers suggesting good performance. MSAs, phylogenies and particularly functional clustering improved drastically upon Seqrutinator application.
 
-Seqrutinator is (about to be) under review but can be accessed as preprint at https://doi.org/10.1101/2022.03.22.485366
+Seqrutinator is under review but can be accessed as preprint at https://doi.org/10.1101/2022.03.22.485366
 
 Below you will find the contents of Supplemental document 1, which is basically a detailed descripion of Seqrutinator and accompaying scripts. My apologies for the fact that the output tables are no really tables here
 
