@@ -39,29 +39,29 @@ Seqrutinator is a fully flexible, modular pipeline. It consists of a main python
 
 ```bash
 $ python3 seqrutinator.py -h
-usage: seqrutinator.py [-h] [-m M] [-f F] [-ali ALI] [-ref1 REF1]
-                         [-ref2 REF2] [-BMGE BMGE] [-p1 P1] [-p2 P2] [-s2 S2]
-                         [-a2 A2] [-m3 M3] [-p3 P3] [-aa3 AA3] [-p4 P4]
-                         [-aa4 AA4] [-a5 A5]
+usage: seqrutinator.py [-h] [-m M] [-f F] [-ali ALI] [-ref1 REF1] [-ref2 REF2] [-bv BV] [-BMGE BMGE] [-p1 P1] [-p2 P2]
+                       [-s2 S2] [-a2 A2] [-m3 M3] [-p3 P3] [-aa3 AA3] [-p4 P4] [-aa4 AA4] [-a5 A5] [-s5 S5]
 
-optional arguments:
+options:
   -h, --help  show this help message and exit
   -m M        Pipelines
-  -f F        Fasta file NOTE THAT THIS IS A REQUIRED PARAMETER
-  -ali ALI    Use MAFFT G-INS-i (1); Use either MAFFT G-INS-i (n<=500) or
-              Global (n>500) (2); Use FAMSA, recommended only for really large
-              datasets (3)
+  -f F        Fasta file (NOTE THAT THIS IS A REQUIRED PARAMETER)
+  -ali ALI    Use MAFFT G-INS-i (1); Use either MAFFT G-INS-i (n<=500) or Global (n>500) (2); Use FAMSA, recommended only for really large datasets (3)
   -ref1 REF1  Use to change input reference sequence
   -ref2 REF2  Use to directly input reference sequence length
+  -bv BV      BMGE version 1 (either 1.0 or 1.12) or 2
   -BMGE BMGE  BMGE deactivated (0), BMGE > 0 is h option for BMGE
   -p1 P1      Proportion (0 to 1) of sequence length coverage for SSR
   -p2 P2      Proportion (0 to 1) of sequence length coverage for NHHR
-  -s2 S2      Mean - alphaSD (1) or Q1 - 1.5IQR (2)
+  -s2 S2      Mean - alphaSD (1) or Q1 - 1.5IQR (2) for NHHR
   -a2 A2      Alpha for NHHR
   -m3 M3      Method one by one (1) or batch (2) for GIR
-  -p3 P3      Proportion (0 to 1) of gaps to define a gap column for GIR (>=
-              VALUE)
+  -p3 P3      Proportion (0 to 1) of gaps to define a gap column for GIR (>= VALUE)
   -aa3 AA3    aa window of contiguos gap columns for GIR
+  -p4 P4      Proportion (0 to 1) of gaps to define a gap column for CGSR (>= VALUE)
+  -aa4 AA4    aa window of contiguos gap columns for CGSR
+  -a5 A5      Alpha for mean - alphaSD (3 is recommended as default option and 2.35 for normal distributions)
+  -s5 S5      Mean - alphaSD (1) or Q1 - 1.5IQR (2) for PR
 ```
 
 #### Module 1: The Short Sequence Remover Module
@@ -83,7 +83,7 @@ As a final remark, similar to what can happen to a sequence-specific insert, seq
 The pseudogene remover is the same outlier remover as NHHR except that is is iterated.  PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default σ3, it presents the σ2 threshold, the upper `1.5*IQR` whisker (> `Q3 + 1.5 IQR`) and the major score-drop Δmax as putative cut-off threshold. Application of the major score drop corresponds to the idea that non-outliers (read functional homologues under functional constraint) evolve with similar evolutionary rates which results in a continuous HMMER score distribution whereas NFHs lack the constraint and will evolve faster and show much lower scores. In certain cases, the major score drop can sometimes detect this. Note however that the dataset supposedly contains sequences from various subfamilies that have somewhat different constraints and that this can also result in large score-drops. The more complex a superfamily is, the less reliable it is to use the largest score-drop as cut-off. Hence, the largest score drop should only be applied when it occurs at or near one of the other three thresholds.
 
 > **Example:** 
-`python3 seqrutinator.py -f sample.fsa -m 1324 -p1 85 -m2 2 s2 2 -a2 5 -m3 2 -p3 80 -aa3 35 -p4 85`
+`python3 seqrutinator.py -f sample.fsa -m 1324 -p1 0.85 -m2 2 s2 2 -a2 5 -m3 2 -p3 0.8 -aa3 35 -p4 0.85`
 >>Runs seqrutinator in the order SSR-GIR-NHHR-CGSR, hence it will remove sequences <85% of the length of the first sequence in sample.fsa, it will then iteratively remove sequences that instigate gap regions of 35 (where a gap column has more than 80% gaps) in batch mode. Next it removes sequences with gap regions of > 30 where 85% of the sequences are allowed to also have a gap at the same column. Do note that the latter is actually not a good idea since it can result in the exclusion of a sequence that has a large gap in the MSA where many sequences actually have gaps.
 
 
@@ -124,14 +124,55 @@ Note that MAFFT G-INS-i comes with a heavy computational cost. For very large da
 
 **Block Mapping and Gathering of Entropy**[^f]⁠. The pipeline and modules execute the command 
 `java -jar BMGE.jar -i <msa.faa> -h 0.8`					
+Make sure the executable file BMGE.jar. By default, Seqrutinator assumes BMGE version used is 1 (either v 1.0 or 1.12).  
+Note that the command uses standard settings except for the entropy that is set to 0.8. Note that the actual trimming is not performed. We recommend BMGE version 1 that can be obtained from the Pasteur Institute [^g]⁠. The jar-file should be in the same directory as where Seqrutinator is execute.
+Note, however, that version 2.0[^i] can also be used (set the argument BMGE version `-bv 2` if this is the case).
 
 **HMMER**[^h]. The outlier removers use HMMER modules⁠ with the following commands:
 `hmmbuild --informat afa --amino <output.hmm> <input.faa>`	
 `hmmsearch --noali –tblout <output.txt> <input.fsa>`
 
+_Additional script_
+**seq_renamer.py**
+Sequences in fasta file may often times contain characters that are incompatible not only with Seqrutinator's dependencies (as whitespaces for hmmer), but also for downstream applications (e.g., dots are replaced by underscores by PhyML). In addition, if names are long can be chopped to a short string by other programs (such as cd-hit). This name format hell makes analysis of sequences data generated by different softwares quite challenging. 
+To overcome this, here we provide the script `seq_renamer.py` which allows the renaming of all sequences in a fasta file to a name with 10 characters. The user can add a text string that enables the quick identification of the sequences by the user. We recommend a string of 3 characters, which will be extended to the final 10 characters by an increasing integer. The outputs are a fasta file with the renamed sequences, and a file with an index matching the new names with the original names.  
 
+```
+$ python3 seq_renamer.py -h                                                                                                         
+usage: seq_renamer.py [-h] [-i I] [-id ID]
 
-Note that the command uses standard settings except for the entropy that is set to 0.8. Note that the actual trimming is not performed. We recommend BMGE version 1.0 that can be obtained from the Pasteur Institute [^g]⁠. The jar-file should be in the same directory as where Seqrutinator is executed. 
+options:
+  -h, --help  show this help message and exit
+  -i I        Fasta file
+  -id ID      ID Key sequence name
+```
+
+```
+$ python3 seq_renamer.py -i Ecoli.fasta -id eco
+Execution Successful: 0:00:00.033954
+```
+yields two files: a fasta file with the renamed sequences `Ecoli_renamed.fsa` and a text file `Ecoli_file_map`, which contains an index of new and original names.
+An extract of the results:
+```
+$ head Ecoli_renamed.fsa -n 8             
+>eco0000001
+MTHIVRFIGLLLLNASSLRGRRVSGIQH
+>eco0000002
+MFLDYFALGVLIFVFLVIFYGIIILHDIPYLIAKKRNHPHADAIHVAGWVSLFTLHVIWPFLWIWATLYRPERGWGMQSHDSSVMQLQQRIAGLEKQLADIKSSSAE
+>eco0000003
+MHAYLHCLSHSPLVGYVDPAQEVLDEVNGVIASARERIAAFSPELVVLFAPDHYNGFFYDVMPPFCLGVGATAIGDFGSAAGELPVPVELAEACAHAVMKSGIDLAVSYCMQVDHGFAQPLEFLLGGLDKVPVLPVFINGVATPLPGFQRTRMLGEAIGRFTSTLNKRVLFLGSGGLSHQPPVPELAKADAHMRDRLLGSGKDLPASERELRQQRVISAAEKFVEDQRTLHPLNPIWDNQFMTLLEQGRIQELDAVSNEELSAIAGKSTHEIKTWVAAFAAISAFGNWRSEGRYYRPIPEWIAGFGSLSARTEN
+>eco0000004
+MYYLKNTNFWMFGLFFFFYFFIMGAYFPFFPIWLHDINHISKSDTGIIFAAISLFSLLFQPLFGLLSDKLGLRKYLLWIITGMLVMFAPFFIFIFGPLLQYNILVGSIVGGIYLGFCFNAGAPAVEAFIEKVSRRSNFEFGRARMFGCVGWALCASIVGIMFTINNQFVFWLGSGCALILAVLLFFAKTDAPSSATVANAVGANHSAFSLKLALELFRQPKLWFLSLYVIGVSCTYDVFDQQFANFFTSFFATGEQGTRVFGYVTTMGELLNASIMFFAPLIINRIGGKNALLLAGTIMSVRIIGSSFATSALEVVILKTLHMFEVPFLLVGCFKYITSQFEVRFSATIYLVCFCFFKQLAMIFMSVLAGNMYESIGFQGAYLVLGLVALGFTLISVFTLSGPGPLSLLRRQVNEVA
+```
+
+```
+$ head Ecoli_file_map -n 4                
+eco0000001 	 WP_001300467.1 MULTISPECIES: leu operon leader peptide [Enterobacteriaceae]
+eco0000002 	 WP_000478195.1 MULTISPECIES: DUF3302 domain-containing protein [Enterobacteriaceae]
+eco0000003 	 WP_000543457.1 MULTISPECIES: 2,3-dihydroxyphenylpropionate/2,3-dihydroxicinnamic acid 1,2-dioxygenase [Bacteria]
+eco0000004 	 WP_000291549.1 MULTISPECIES: lactose permease [Bacteria]
+```
+We recommend running the script before running the sensitive search with `MUFASA`. `seq_renamer.py` requires Biopython.
 
 - Dependencies of Seqrutinator are indicated in the script.
 
@@ -139,7 +180,7 @@ Note that the command uses standard settings except for the entropy that is set 
 [^b]: https://mafft.cbrc.jp/alignment/server/.
 [^c]: S. Deorowicz, A. Debudaj-Grabysz, and A. Gudys, “FAMSA: Fast and accurate multiple sequence alignment of huge protein families,” Sci. Rep., vol. 6, no. 1, pp. 1–13, Sep. 2016, doi: 10.1038/srep33964.
 [^d]: https://github.com/refresh-bio/FAMSA/.
-
 [^f]: A. Criscuolo and S. Gribaldo, “BMGE (Block Mapping and Gathering with Entropy): A new software for selection of phylogenetic informative regions from multiple sequence alignments,” BMC Evol. Biol., vol. 10, no. 1, pp. 1–21, Jul. 2010, doi: 10.1186/1471-2148-10-210/FIGURES/9.
-[^h]: S. R. Eddy, “Accelerated Profile HMM Searches,” PLOS Comput. Biol., vol. 7, no. 10, p. e1002195, 2011, doi: 10.1371/JOURNAL.PCBI.1002195.
 [^g]: ftp://ftp.pasteur.fr/pub/gensoft/projects/BMGE/
+[^h]: S. R. Eddy, “Accelerated Profile HMM Searches,” PLOS Comput. Biol., vol. 7, no. 10, p. e1002195, 2011, doi: 10.1371/JOURNAL.PCBI.1002195.
+[^i]: https://gitlab.pasteur.fr/GIPhy/BMGE
