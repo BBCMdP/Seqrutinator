@@ -8,7 +8,6 @@ Seqrutinator is under review but can be accessed as preprint at https://doi.org/
 
 Below you will find the contents of Supplemental document 1, which is basically a detailed descripion of Seqrutinator and accompaying scripts. My apologies for the fact that the output tables are no really tables here
 
-
 ## Introduction
 Seqrutinator is a modular pipeline written in Python 3 to identify and remove protein superfamily sequences that likely either correspond to a non-functional homologue (NFH) or are incorrect, the latter due to either sequencing or gene modelling errors. Seqrutinator is made for complex single-domain protein superfamilies. It requires intermediate or large datasets (~>50 input sequences). This document describes in detail how the modules function, how the pipeline is made and which outputs are generated. Seqrutinator requires a single input file with the sequence set in fasta format, either aligned or not. Dependencies are described/listed in Materials and Methods, which includes shell commands that are used to run software packages such as MAFFT.
 
@@ -80,7 +79,7 @@ CGSR removes sequences that have one or more large continuous gaps detected in t
 As a final remark, similar to what can happen to a sequence-specific insert, sequence-specific deletions can result in the misalignment of one or more residues that flank the deletion. As a result, such deletions can appear as split which impedes their detection. This problem is not tackled since the solution similar to that was used for GIR (combined gap score) tends to identify many loop regions and leads to many false positives.
 
 #### Module 5: The Pseudogene Remover
-The pseudogene remover is the same outlier remover as NHHR except that is is iterated.  PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default σ3, it presents the σ2 threshold, the upper `1.5*IQR` whisker (> `Q3 + 1.5 IQR`) and the major score-drop Δmax as putative cut-off threshold. Application of the major score drop corresponds to the idea that non-outliers (read functional homologues under functional constraint) evolve with similar evolutionary rates which results in a continuous HMMER score distribution whereas NFHs lack the constraint and will evolve faster and show much lower scores. In certain cases, the major score drop can sometimes detect this. Note however that the dataset supposedly contains sequences from various subfamilies that have somewhat different constraints and that this can also result in large score-drops. The more complex a superfamily is, the less reliable it is to use the largest score-drop as cut-off. Hence, the largest score drop should only be applied when it occurs at or near one of the other three thresholds.
+The pseudogene remover is the same outlier remover as NHHR except that it is iterated.  PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default σ3, it presents the σ2 threshold, the upper `1.5*IQR` whisker (> `Q3 + 1.5 IQR`) and the major score-drop Δmax as putative cut-off threshold. Application of the major score drop corresponds to the idea that non-outliers (read functional homologues under functional constraint) evolve with similar evolutionary rates which results in a continuous HMMER score distribution whereas NFHs lack the constraint and will evolve faster and show much lower scores. In certain cases, the major score drop can sometimes detect this. Note however that the dataset supposedly contains sequences from various subfamilies that have somewhat different constraints and that this can also result in large score-drops. The more complex a superfamily is, the less reliable it is to use the largest score-drop as cut-off. Hence, the largest score drop should only be applied when it occurs at or near one of the other three thresholds.
 
 > **Example:** 
 `python3 seqrutinator.py -f sample.fsa -m 1324 -p1 0.85 -m2 2 s2 2 -a2 5 -m3 2 -p3 0.8 -aa3 35 -p4 0.85`
@@ -128,9 +127,15 @@ Make sure the executable file BMGE.jar. By default, Seqrutinator assumes BMGE ve
 Note that the command uses standard settings except for the entropy that is set to 0.8. Note that the actual trimming is not performed. We recommend BMGE version 1 that can be obtained from the Pasteur Institute [^g]⁠. The jar-file should be in the same directory as where Seqrutinator is execute.
 Note, however, that version 2.0[^i] can also be used (set the argument BMGE version `-bv 2` if this is the case).
 
-**HMMER**[^h]. The outlier removers use HMMER modules⁠ with the following commands:
+**HMMER**[^h]. Installation via Synaptic is available. The outlier removers use HMMER modules⁠ with the following commands:
 `hmmbuild --informat afa --amino <output.hmm> <input.faa>`	
 `hmmsearch --noali –tblout <output.txt> <input.fsa>`
+
+**Python packages**
+The `requirements.txt` file can be used to install the required python3 packages. Run for example:
+```
+$ pip install -r requirements.txt
+```
 
 _Additional script_
 **seq_renamer.py**
