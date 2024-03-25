@@ -131,8 +131,8 @@ Note, however, that version 2.0[^i] can also be used (set the argument BMGE vers
 `hmmbuild --informat afa --amino <output.hmm> <input.faa>`	
 `hmmsearch --noali –tblout <output.txt> <input.fsa>`
 
-**Python packages**
-The `requirements.txt` file can be used to install the required python3 packages. Run for example:
+**Python packages**. The `requirements.txt` file can be used to install the required python3 packages. Run for example:
+
 ```
 $ pip install -r requirements.txt
 ```
