@@ -4,7 +4,7 @@
 ###############################################################################
 #                         Script Description                                  #
 # name:                                                                       #
-#     lib_seqrutinator_v02gamma.py                                            #
+#     lib_seqrutinator.py                                                     #
 #                                                                             #
 # description:                                                                #
 #     Automatic protein superfamily analysis                                  #
@@ -14,20 +14,17 @@
 #     Atencio, Arjen ten Have                                                 #
 #                                                                             #
 # Version release:                                                            #
-#     version 02delta 2022-09-14 revised by FV                                #
+#     version 2024-03-25 revised by FV                                        #
 ###############################################################################
 
 
 ###############################################################################
 #######################   AUTO-DATAMINING LIBRARY   ###########################
 ### Libraries #################################################################
-from __future__ import division
+
 import glob
 import os
 import re
-#import sys
-#import psutil
-#import logging
 import numpy as np
 import statistics
 from statsmodels import robust
@@ -290,12 +287,22 @@ def seqs_extractor(fasta_file):
 
     names = []
     seqs = []
-
     for seq_record in SeqIO.parse(fasta_file, "fasta"):
         names.append(seq_record.id)
         seqs.append(seq_record.seq)
 
     return names, seqs
+
+def seqs_extractor_desc(fasta_file):
+
+    names = []
+    seqs = []
+    for seq_record in SeqIO.parse(fasta_file, "fasta"):
+        names.append(seq_record.description)
+        seqs.append(seq_record.seq)
+
+    return names, seqs
+
 
 # Scores Extractor
 
@@ -654,72 +661,116 @@ def FAMSA(fasta_file):
     return()
 
 
-# BMGE
+# Check BMGE version
+def check_bmge_version(bv_arg):
+    # Execute the command to get BMGE version information
+    output = "bmge_version.txt"
+    os.system(f'java -jar BMGE.jar -h > {output}')
+    
+    bvers = open(output, "r")
+    lines = bvers.readlines()
+    
+    if '\n' in lines:
+        detected_version = 2 
+    elif '   incorrect options\n' in lines:
+        detected_version = 1
+    else:
+        print("Error: BMGE.jar file not found. Make sure this file is in the same directory as Seqrutinator")
+        return False
+    
+    bvers.close()
+    
+    os.remove(output)
+        # Check if the detected version matches the specified bv argument
+    if bv_arg != detected_version:
+        print(f"Error: BMGE version {detected_version} detected, but -bv argument is {bv_arg}.")
+        return False
 
+        # Version and bv argument match
+    return True
 
-def BMGE(fasta, hh, BMGE_out):
+# run BMGE
+def BMGE(version, fasta, hh, BMGE_out):
 
-    os.system("java -jar BMGE.jar -i " + str(fasta) +
-    " -t AA -h " + str(hh) + " > " + str(BMGE_out))
+    if version == 1: 
+        os.system(f'java -jar BMGE.jar -i {fasta} + -t AA -h {hh}  > {BMGE_out}')
+
+    if version == 2: 
+        os.system(f'java -jar BMGE.jar -i {fasta} -t AA -o output_int_bmge -e {hh} > {BMGE_out}') 
+        os.remove('output_int_bmge')
 
     return()
 
 # BMGE reader
-
-
-def BMGE_reader(BMGE_output):
+def BMGE_reader(version,BMGE_output):
 
     real_lines = []
 
-    fb = open(BMGE_output, "r")
-    lines = fb.readlines()
+    if version == 1:
+        
+        fb = open(BMGE_output, "r")
+        lines = fb.readlines()
 
-    for line, n_line in zip(lines, range(1, len(lines))):
+        for line, n_line in zip(lines, range(1, len(lines))):
 
-        #print(n_line, line)
+            #print(n_line, line)
 
-        if line not in real_lines:
-            real_lines.append(str(line))
+            if line not in real_lines:
+                real_lines.append(str(line))
 
-    fb.close()
+        fb.close()
 
-    before_list = []
-    after_list = []
+        in_list = []
+        out_list = []
 
-    for rl in real_lines:
-        #print(rl)
+        for rl in real_lines:
+            if "before" in rl:
+                in_seq = int(rl.split(" ")[5])
+                out_char = int(rl.split(" ")[8])
+                in_list.append(in_seq)
+                out_list.append(out_char)
 
-        if "before" in rl:
-            bef_seq = int(rl.split(" ")[5])
-            bef_char = int(rl.split(" ")[8])
-            before_list.append(bef_seq)
-            before_list.append(bef_char)
+            if "after" in rl:
+                list_rl = str(rl.split("\r")[0])
+                in_seq = int(list_rl.split(" ")[6])
+                out_char = int(list_rl.split(" ")[9])
+                in_list.append(in_seq)
+                out_list.append(out_char)
 
-        if "after" in rl:
-            list_rl = str(rl.split("\r")[0])
-            aft_seq = int(list_rl.split(" ")[6])
-            aft_char = int(list_rl.split(" ")[9])
-            after_list.append(aft_seq)
-            after_list.append(aft_char)
-
-    alert = "NO"
-
-    if before_list[0] != after_list[0]:
-        alert = "YES"
-
-    else:
         alert = "NO"
 
-    return alert, before_list[0], before_list[1], after_list[0], after_list[1]
+        if in_list[0] != out_list[0]:
+            alert = "YES"
 
-# PhyML
+        else:
+            alert = "NO"
 
+    if version == 2:
+        
+        fb = open(BMGE_output, "r")
+        lines = fb.readlines()
+        fb.close()
 
-def PhyML(phylip):
+        in_list = []
+        out_list = []
 
-    os.system("phyml -i " + str(phylip) + " -d aa")
+        for rl in lines:
+            if "input" in rl:
+                in_seq = int(rl.split(" ")[4])
+                in_char = int(rl.split(" ")[6])
+                in_list.append(in_seq)
+                in_list.append(in_char)
 
-    return()
+            if "output" in rl:
+                out_seq = int(rl.split(" ")[3])
+                out_char = int(rl.split(" ")[5])
+                out_list.append(out_seq)
+                out_list.append(out_char)
+
+        alert = "n.a."
+
+    return alert, in_list[0], out_list[0], in_list[1], out_list[1]
+
 
 # Hmmbuild
 
@@ -1467,7 +1518,7 @@ def gap_instigator_identifier(fasta_file, thr, aa, gir_plt, prob_seq_file):
             cs = 0
             scores_col.append(cs)
             scores_col2.append(gs)
-        print(str(lc) + " P: " + str(s) + "% ready")
+        #print(str(lc) + " P: " + str(s) + "% ready")
 
     total_score = sum(blocks_sc)
 
@@ -1613,15 +1664,15 @@ def GIR(met, fasta_file, real_fasta, thr, aa, ali):
 
     GIR_plot = "GIR_it" + str(it + 1) + "_Plot_" + str(real_fasta) + ".png"
     GIR_prob_seq = "GIR_it" + str(it + 1) + "_Data_" + str(real_fasta) + ".txt"
-    GIR_rem_fsa = "GIR_removed_" + str(real_fasta) + ".fsa"
-    GIR_rem = "GIR_removed_" + str(real_fasta) + ".txt"
+    GIR_rem_fsa = "GIR_" + str(real_fasta) + "_removed.fsa"
+    GIR_rem = "GIR_" + str(real_fasta) + "_removed.txt"
 
     if met == 1:  # One by one
         real_hits = []
 
         # First GIR
         real_names = gap_instigator_identifier(fasta_file, thr, aa, GIR_plot, GIR_prob_seq)
-        print(real_names)
+        #print(real_names)
 
         # Remove gaps from fasta file
         # wog_fasta: without gaps
@@ -1658,8 +1709,10 @@ def GIR(met, fasta_file, real_fasta, thr, aa, ali):
             if ali == 3:
                 FAMSA(new_name)
 
+            fasta_file = rename_mafft(new_name)
+
             # GIR of new aligned fasta
-            partial_names = gap_instigator_identifier("Mafft_" + str(new_name), thr, aa, GIR_plot, GIR_prob_seq)
+            partial_names = gap_instigator_identifier(fasta_file, thr, aa, GIR_plot, GIR_prob_seq)
             real_names = list(partial_names)
 
         fetching(real_hits, wog_fasta, GIR_rem_fsa)
@@ -1681,7 +1734,7 @@ def GIR(met, fasta_file, real_fasta, thr, aa, ali):
 
         # First GIR
         real_names = gap_instigator_identifier(fasta_file, thr, aa, GIR_plot, GIR_prob_seq)
-        print(real_names)
+        #print(real_names)
         # Remove gaps from fasta file
         wog_fasta = remove_gaps(fasta_file)
 
@@ -1694,14 +1747,14 @@ def GIR(met, fasta_file, real_fasta, thr, aa, ali):
 
             if it == 1:
                 # Anti-fetching of fasta file
-                new_name = "GIR_it" + str(iteration) + "_" + str(real_fasta) + ".fsa"
+                new_name = "GIR_it" + str(it) + "_" + str(real_fasta) + ".fsa"
                 anti_fetching(real_names, wog_fasta, new_name)
 
                 for rn in real_names:
                     real_hits.append(rn)
             else:
                 # Anti-fetching of fasta file
-                new_name = "GIR_it" + str(iteration) + "_" + str(real_fasta) + ".fsa"
+                new_name = "GIR_it" + str(it) + "_" + str(real_fasta) + ".fsa"
                 anti_fetching(real_names, "GIR_it" + str(it - 1) + "_" + str(real_fasta), new_name)
 
                 for rn in real_names:
@@ -1994,7 +2047,7 @@ def CGSR(fasta_file, real_fasta, thr, minimum, ali):
 # Pseudogene Remover (PR)
 
 
-def PR(filename, auto, ali):
+def PR(filename, s5, auto, ali):
     new_filename = filename.split(".")
 
     # Read msa and extract sequences and names
@@ -2103,7 +2156,6 @@ def PR(filename, auto, ali):
 
         b_m2sd = len([x for x in H_scores if x < m2sd])
         b_m3sd = len([x for x in H_scores if x < m3sd])
-
         b_IQR_threshold = len([x for x in H_scores if x < IQR_threshold])
 
         plt.scatter(range(len(H_scores)), H_scores, marker='o')
@@ -2133,17 +2185,22 @@ def PR(filename, auto, ali):
         plt.savefig(h_s_p)
         plt.close()
 
-
-        mean3sd_threshold = len([x for x in H_scores if x < m3sd])
-        if mean3sd_threshold == 0:
-            print ("mean - 3sd threshold have not sequence below it, break while")
+        
+        if s5 == 1:
+            PR_thresh = m3sd
+        if s5 == 2:
+            PR_thresh =  IQR_threshold  
+        
+        fetch_threshold = len([x for x in H_scores if x < PR_thresh])
+        if fetch_threshold == 0:
+            #print ("mean - 3sd threshold have not sequence below it, break while")
             break
         else:
             terminate = []
             H_names_reloaded = []
             for name, score in zip(H_names, H_scores):
                 # check low score
-                if score < m3sd:
+                if score < PR_thresh:
                         terminate.append(name)
                 else:
                     H_names_reloaded.append(name)
@@ -2212,11 +2269,6 @@ def PR(filename, auto, ali):
     # Remove temporal files
 
     if seqs_removed:
-        os.system("rm " + str("hmm_" + str(new_f_name)))
-        os.system("rm " + str("hmms_" + str(new_f_name)))
-        os.system("rm " + str("hmm_" + str(name_it)))
-        os.system("rm " + str("hmms_" + str(name_it)))
-
         final_fsa = "PR_" + str(new_filename[0]) + ".fsa"
         final_faa = "PR_" + str(new_filename[0]) + ".faa"
 
