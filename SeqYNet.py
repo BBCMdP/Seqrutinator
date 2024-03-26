@@ -3,13 +3,13 @@
 """
 Created on Fri May 31 16:14:28 2019
 
-@authors: Nicolas Stocchi, Agustin Amalfitano, Fernando Villareal, Marcelo
+@authors: Nicolas Stocchi, Agustin Amalfitano, Fernando Villarreal, Marcelo
 Atencio, Arjen ten Have
-Final revision in version delta_14092022 15/09/2022 FV
+Final revision 03/25/2024 FV
 """
 
 import os
-#import sys
+import sys
 import logging
 import argparse
 import lib_seqrutinator as lib
@@ -25,34 +25,37 @@ path = os.path.dirname(os.path.abspath(__file__))
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('-ext', default='*.fasta', help='Extension of fasta files')
+parser.add_argument('-ext', default='*.fasta', help='Extension of fasta files, default = \'*.fasta\'')
 parser.add_argument('-s', default=1, help='Sort filelist from high to low (1) or from low to high (2)')
 parser.add_argument('-m', default='12345', help='Pipelines')
 parser.add_argument('-ali', default=1, help='Use MAFFT G-INS-i (1); Use either MAFFT G-INS-i (n<=500) or Global (n>500) (2); Use FAMSA, recommended only for really large datasets (3)')
 parser.add_argument('-ref1', default='first_seq', help='First sequence in the MSA is the reference sequence (by default) or user\'s input reference sequence')
-parser.add_argument('-ref2', default=0, help='Users input reference sequence length')
+parser.add_argument('-ref2', default=0, help='User\'s input reference sequence length')
+parser.add_argument('-bv', default=1, help='BMGE version 1 (either 1.0 or 1.12) or 2')
 parser.add_argument('-BMGE', default=0, help='BMGE deactivated (0), BMGE > 0 is h option for BMGE')
 
+
 # Module 1: SSR
-parser.add_argument('-p1', default=0.65, help='Percentage of sequence length coverage for SSR')
+parser.add_argument('-p1', default=0.65, help='Proportion of sequence length coverage for SSR (0 to  1)')
 
 # Module 2: NHHR
-parser.add_argument('-p2', default=0.65, help='Percentage of sequence length coverage for NHHR')
-parser.add_argument('-m2', default=1, help='HMMER Score (1) or TCS (2) method for NHHR')
+parser.add_argument('-p2', default=0.65, help='Proportion of sequence length coverage for NHHR (0 to  1)')
+parser.add_argument('-m2', default=1, help='HMMER Score (1) or TCS (2) method for NHHR ')
 parser.add_argument('-s2', default=1, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2)")
 parser.add_argument('-a2', default=3, help='Alpha for NHHR')
 
 # Module 3: GIR
 parser.add_argument('-m3', default=1, help='Method one by one (1) or batch (2) for GIR')
-parser.add_argument('-p3', default=0.9, help='Percentage of gaps to define a gap column for GIR (>= VALUE)')
+parser.add_argument('-p3', default=0.9, help='Proportion of gaps to define a gap column for GIR (>= VALUE, from 0 to 1)')
 parser.add_argument('-aa3', default=30, help='aa window of contiguos gap columns for GIR')
 
 # Module 4: CGSR
-parser.add_argument('-p4', default=0.5, help='Percentage of gaps to define a gap column for CGSR (>= VALUE)')
+parser.add_argument('-p4', default=0.5, help='Proportion of gaps to define a gap column for CGSR (>= VALUE, from 0 to 1)')
 parser.add_argument('-aa4', default=30, help='aa window of contiguos gap columns for CGSR')
 
 # Module 5: OR
 parser.add_argument('-a5', default=3, help='Alpha for mean - alphaSD (3 is recommended as befault option and 2.35 for normal distributions)')
+parser.add_argument('-s5', default=1, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2)')
 
 args = vars(parser.parse_args())
 
@@ -64,6 +67,7 @@ ali = int(args['ali'])
 ref_seq = str(args['ref1'])
 ref_len = int(args['ref2'])
 BMGE = float(args['BMGE'])
+bmge_version = int(args['bv'])
 
 # Module 1: SSR
 p1 = float(args['p1'])
@@ -85,6 +89,7 @@ aa4 = int(args['aa4'])  # t4
 
 # Module 5: OR
 a5 = float(args['a5'])
+s5 = float(args['s5'])
 
 ### LOG #######################################################################
 logger = logging.getLogger('SeqYNet')
@@ -127,6 +132,9 @@ if ref_len != 0:
 if BMGE != 0:
     command_parameters.append("-BMGE " + str(BMGE))
 
+if bmge_version != 1:
+    command_parameters.append("-bv " + str(bmge_version))
+
 # Module 1: SSR
 if p1 != 0.65:
     command_parameters.append("-p1 " + str(p1))
@@ -164,6 +172,8 @@ if aa4 != 30:
 # Module 5: PR
 if a5 != 3:
     command_parameters.append("-a5 " + str(a5))
+if s5 != 1:
+    command_parameters.append("-s5 " + str(s5))
 
 print(command_parameters)
 
@@ -174,6 +184,26 @@ if command_parameters:
         parameters = ' '.join(str(x) for x in command_parameters)
 
 print(parameters)
+
+
+if BMGE > 0:
+
+    if lib.check_bmge_version(bmge_version):
+        # LOG #####################################################################
+        logger.info('BMGE (version ' + str(bmge_version) + ') will be used. Selected h for BMGE is ' + str(BMGE) +
+        ' - Total time: ' + str((datetime.now() - startTime)))
+        print('BMGE (version ' + str(bmge_version) + ') will be used. Selected h for BMGE is ' + str(BMGE) +
+        ' - Total time: ' + str((datetime.now() - startTime)))
+        ###########################################################################
+    else:
+        # LOG #####################################################################
+        logger.critical('There is a problem with BMGE. Check the executable is in the ' +
+                        'directory and if it is, which version you are using (must match -bv).' + 
+                         ' - Total time: ' +  str((datetime.now() - startTime)))
+        print('There is a problem with BMGE. Check the executable is in the directory and if it is, which version you are using (must match -bv).')
+        sys.exit()
+        ###########################################################################
+
 
 if ref_seq != 'first_seq' and ref_len != 0:
     # LOG #####################################################################
@@ -243,14 +273,13 @@ for fasta in list_of_fasta:
             print("python3 seqrutinator.py -f " + str(fasta) + " " + str(parameters))
             os.system("python3 seqrutinator.py -f " + str(fasta) + " " + str(parameters))
 
-    os.system("rm hmm_*")
     hmms_list = lib.input_files("hmms_*_" + str(real_fasta) + ".*")
     
     for hmms in hmms_list:
         os.system("rm " + str(hmms))
     
     if BMGE > 0:
-        bf = open(str(real_fasta) + "_BMGE_table.csv")
+        bf = open(f'{real_fasta}_BMGE_table.csv')
         bf_lines = bf.readlines()
         
         BMGE_lines.append(str(real_fasta) + "\n")
@@ -271,7 +300,7 @@ for fasta in list_of_fasta:
     str((datetime.now() - startTime)))
     ###########################################################################
 
-BMGE_file = open("BMGE_Summary.txt", "w")
+BMGE_file = open("BMGE_Summary.tsv", "w")
 for bl in BMGE_lines:
     BMGE_file.write(bl)
 BMGE_file.close()
@@ -282,3 +311,4 @@ str((datetime.now() - startTime)))
 print('SeqYNet finished - Total time: ' +
 str((datetime.now() - startTime)))
 ###############################################################################
+

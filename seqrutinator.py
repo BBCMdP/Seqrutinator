@@ -20,7 +20,7 @@
 ###############################################################################
 
 # libraries
-from __future__ import division
+
 import os
 import sys
 import logging
@@ -43,7 +43,7 @@ parser.add_argument('-f', help='Fasta file (NOTE THAT THIS IS A REQUIRED PARAMET
 parser.add_argument('-ali', default=1, help='Use MAFFT G-INS-i (1); Use either MAFFT G-INS-i (n<=500) or Global (n>500) (2); Use FAMSA, recommended only for really large datasets (3)')
 parser.add_argument('-ref1', default='first_seq', help='Use to change input reference sequence')
 parser.add_argument('-ref2', default=0, help='Use to directly input reference sequence length')
-
+parser.add_argument('-bv', default=1, help='BMGE version 1 (either 1.0 or 1.12) or 2')
 parser.add_argument('-BMGE', default=0, help='BMGE deactivated (0), BMGE > 0 is h option for BMGE')
 
 # Module 1: SSR
@@ -51,7 +51,7 @@ parser.add_argument('-p1', default=0.65, help='Proportion (0 to 1) of sequence l
 
 # Module 2: NHHR
 parser.add_argument('-p2', default=0.65, help='Proportion (0 to 1) of sequence length coverage for NHHR')
-parser.add_argument('-s2', default=1, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2)")
+parser.add_argument('-s2', default=1, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2) for NHHR")
 parser.add_argument('-a2', default=3, help='Alpha for NHHR')
 
 # Module 3: GIR
@@ -64,7 +64,8 @@ parser.add_argument('-p4', default=0.5, help='Proportion (0 to 1) of gaps to def
 parser.add_argument('-aa4', default=30, help='aa window of contiguos gap columns for CGSR')
 
 # Module 5: PR
-parser.add_argument('-a5', default=3, help='Alpha for mean - alphaSD (3 is recommended as befault option and 2.35 for normal distributions)')
+parser.add_argument('-a5', default=3, help='Alpha for mean - alphaSD (3 is recommended as default option and 2.35 for normal distributions)')
+parser.add_argument('-s5', default=1, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2) for PR')
 
 args = vars(parser.parse_args())
 
@@ -73,6 +74,7 @@ pipeline = str(args['m'])  # Terminal Condition
 fasta_file = str(args['f'])  # TC
 ali = int(args['ali'])
 BMGE = float(args['BMGE'])
+bmge_version = int(args['bv'])
 
 # Module 1: SSR
 ref_seq = str(args['ref1'])  # TC
@@ -95,6 +97,7 @@ aa4 = int(args['aa4'])  # t4
 
 # Module 5: PR
 a5 = float(args['a5'])
+s5 = float(args['s5'])
 
 real_fasta = str((fasta_file.split(".")[:-1])[0])
 print(real_fasta)
@@ -234,9 +237,8 @@ else:
     ###########################################################################
 
     # Extract names and sequences from MSA
-    names, seqs =lib.seqs_extractor(fasta_file)
-    # Identify if it is a faa or fsa
-    # IUPAC verification v02beta
+    names, seqs =lib.seqs_extractor_desc(fasta_file)
+ 
     IUPAC = ["-", "a", "A", "c", "C", "d", "D", "e", "E", "f", "F", "g", "G",
     "h", "H", "i", "I", "k", "K", "l", "L", "m", "M", "n", "N", "p", "P", "q",
     "Q", "r", "R", "s", "S", "t", "T", "v", "V", "w", "W", "y", "Y"]
@@ -250,8 +252,15 @@ else:
                     '\nPlease check your data and remove all the sequences with non IUPAC characters')
                     sys.exit()
                     ###########################################################
+        if ' ' in str(id):
+            # LOG #####################################################
+            logger.critical('One or more IDs in the sequences of your fasta file have spaces. This is problematic for Seqrutinator. Please remove spaces in the IDs or consider to rename sequences altogether (recommended)')
+            print('One or more IDs in the sequences of your fasta file have spaces. This is problematic for Seqrutinator')
+            print('Please remove spaces in the IDs or consider to rename sequences altogether (recommended)')        
+            sys.exit()
+            ###########################################################
 
-
+    names, seqs =lib.seqs_extractor(fasta_file)
 
     wog_con = 0
 
@@ -336,16 +345,23 @@ if BMGE == 0:
 
 if BMGE > 0:
 
-    # LOG #####################################################################
-    logger.info('BMGE will be used and selected h for BMGE is ' + str(BMGE) +
-    ' - Total time: ' + str((datetime.now() - startTime)))
-    print('BMGE will be used and selected h for BMGE is ' + str(BMGE) +
-    ' - Total time: ' + str((datetime.now() - startTime)))
-    ###########################################################################
+    if lib.check_bmge_version(bmge_version):
+        # LOG #####################################################################
+        logger.info('BMGE (version ' + str(bmge_version) + ') will be used. Selected h for BMGE is ' + str(BMGE) +
+        ' - Total time: ' + str((datetime.now() - startTime)))
+        print('BMGE (version ' + str(bmge_version) + ') will be used. Selected h for BMGE is ' + str(BMGE) +
+        ' - Total time: ' + str((datetime.now() - startTime)))
+        ###########################################################################
+    else:
+        # LOG #####################################################################
+        logger.critical('There is a problem with BMGE. Check the executable is in the ' +
+                        'directory and if it is, which version you are using (must match -bv).' + 
+                         ' - Total time: ' +  str((datetime.now() - startTime)))
+        print('There is a problem with BMGE. Check the executable is in the directory and if it is, which version you are using (must match -bv).')
+        sys.exit()
+        ###########################################################################
 
 # -ref1 or ref2 parameters
-
-
 if ref_seq != 'first_seq' and ref_len != 0:
     # LOG #####################################################################
     logger.critical('You cannot apply two rules for the sequence length variable,' +
@@ -612,9 +628,8 @@ print('aa window of contiguos gap columns for CGSR: ' + str(aa4) +
 ' - Total time: ' + str((datetime.now() - startTime)))
 ###############################################################################
 
-# PR parameter
-
-# -a5 parameter
+# PR parameters
+# -s5 parameter
 
 # LOG #########################################################################
 logger.info('Selected alpha for PR: ' + str(a5) +
@@ -623,6 +638,16 @@ print('Selected alpha for PR: ' + str(a5) +
 ' - Total time: ' + str((datetime.now() - startTime)))
 ###############################################################################
 
+# -a5 parameter
+# LOG #########################################################################
+logger.info('Selected alpha for PR: ' + str(a5) +
+' - Total time: ' + str((datetime.now() - startTime)))
+print('Selected alpha for PR: ' + str(a5) +
+' - Total time: ' + str((datetime.now() - startTime)))
+###############################################################################
+
+
+
 original_fasta = fasta_file
 real_fasta = str((fasta_file.split(".")[:-1])[0])
 #print(real_fasta)
@@ -630,11 +655,18 @@ real_fasta = str((fasta_file.split(".")[:-1])[0])
 temporary_fasta = "temporary_fasta"
 
 os.system("mkdir Results_" + str(real_fasta))
-os.system("mkdir Results_" + str(real_fasta) + "/1_SSR")
-os.system("mkdir Results_" + str(real_fasta) + "/2_NHHR")
-os.system("mkdir Results_" + str(real_fasta) + "/3_GIR")
-os.system("mkdir Results_" + str(real_fasta) + "/4_CGSR")
-os.system("mkdir Results_" + str(real_fasta) + "/5_PR")
+
+for sp in splitted_pipeline:
+    if sp == '1':
+        os.system("mkdir Results_" + str(real_fasta) + "/1_SSR")
+    if sp == '2':
+        os.system("mkdir Results_" + str(real_fasta) + "/2_NHHR")
+    if sp == '3':
+        os.system("mkdir Results_" + str(real_fasta) + "/3_GIR")
+    if sp == '4':
+        os.system("mkdir Results_" + str(real_fasta) + "/4_CGSR")
+    if sp == '5':
+        os.system("mkdir Results_" + str(real_fasta) + "/5_PR")
 dst = path + "/Results_" + str(real_fasta)
 sst = path + "/Results_" + str(real_fasta) + "/1_SSR"
 nst = path + "/Results_" + str(real_fasta) + "/2_NHHR"
@@ -711,8 +743,8 @@ for sp in splitted_pipeline:
                 ###############################################################
 
                 try:
-                    lib.BMGE(temp_SSR, BMGE, "BMGE_output.txt")
-                    BMGE_alert, seq_bef, BMGE_bef, seq_aft, BMGE_aft = lib.BMGE_reader("BMGE_output.txt")
+                    lib.BMGE(bmge_version,temp_SSR, BMGE, "BMGE_output.txt")
+                    BMGE_alert, seq_bef, seq_aft, BMGE_bef,BMGE_aft = lib.BMGE_reader(bmge_version,"BMGE_output.txt")
 
                     BMGE_lines_split.append(str(spm) + "\t" + str(seq_bef) + "\t" + str(seq_aft) + "\t" + str(BMGE_bef) + "\t" + str(BMGE_aft) + "\t" + str(BMGE_alert) + "\n")
 
@@ -724,7 +756,7 @@ for sp in splitted_pipeline:
                     ###########################################################
 
                 except:
-                    BMGE_lines_split.append(str(spm) + "\t0\t0\t0\t0\tYES\n")
+                    BMGE_lines_split.append(str(spm) + "\tSomething went wrong with BMGE.\n")
 
                     # LOG #####################################################
                     logger.info('BMGE did not finished for ' + str(spm) +
@@ -732,6 +764,7 @@ for sp in splitted_pipeline:
                     print('BMGE did not finished for ' + str(spm) +
                     ' - Total time: ' + str((datetime.now() - startTime)))
                     ###########################################################
+
 
             r_lines = []
 
@@ -781,8 +814,8 @@ for sp in splitted_pipeline:
 
         else:
             # LOG #############################################################
-            print("WARNING: YOU CAN NOT REPEAT MODULES, FILENAMES ISSUES")
-            logger.info("WARNING: YOU CAN NOT REPEAT MODULES, FILENAMES ISSUES")
+            print("WARNING: YOU CANNOT REPEAT MODULES, FILENAMES ISSUES")
+            logger.info("WARNING: YOU CANNOT REPEAT MODULES, FILENAMES ISSUES")
             sys.exit()
             ###################################################################
 
@@ -822,8 +855,8 @@ for sp in splitted_pipeline:
                 ###############################################################
 
                 try:
-                    lib.BMGE(temp_NHHR, BMGE, "BMGE_output.txt")
-                    BMGE_alert, seq_bef, BMGE_bef, seq_aft, BMGE_aft = lib.BMGE_reader("BMGE_output.txt")
+                    lib.BMGE(bmge_version,temp_NHHR, BMGE, "BMGE_output.txt")
+                    BMGE_alert, seq_bef, seq_aft, BMGE_bef, BMGE_aft = lib.BMGE_reader(bmge_version,"BMGE_output.txt")
 
                     BMGE_lines_split.append(str(spm) + "\t" + str(seq_bef) + "\t" + str(seq_aft) + "\t" + str(BMGE_bef) + "\t" + str(BMGE_aft) + "\t" + str(BMGE_alert) + "\n")
 
@@ -835,7 +868,7 @@ for sp in splitted_pipeline:
                     ###########################################################
 
                 except:
-                    BMGE_lines_split.append(str(spm) + "\t0\t0\t0\t0\tYES\n")
+                    BMGE_lines_split.append(str(spm) + "\tSomething went wrong with BMGE.\n")
 
                     # LOG #####################################################
                     logger.info('BMGE did not finished for ' + str(spm) +
@@ -956,8 +989,8 @@ for sp in splitted_pipeline:
                 ###############################################################
 
                 try:
-                    lib.BMGE(temp_GIR, BMGE, "BMGE_output.txt")
-                    BMGE_alert, seq_bef, BMGE_bef, seq_aft, BMGE_aft = lib.BMGE_reader("BMGE_output.txt")
+                    lib.BMGE(bmge_version,temp_GIR, BMGE, "BMGE_output.txt")
+                    BMGE_alert, seq_bef, seq_aft, BMGE_bef, BMGE_aft = lib.BMGE_reader(bmge_version,"BMGE_output.txt")
 
                     BMGE_lines_split.append(str(spm) + "\t" + str(seq_bef) + "\t" + str(seq_aft) + "\t" + str(BMGE_bef) + "\t" + str(BMGE_aft) + "\t" + str(BMGE_alert) + "\n")
 
@@ -969,7 +1002,7 @@ for sp in splitted_pipeline:
                     ###########################################################
 
                 except:
-                    BMGE_lines_split.append(str(spm) + "\t0\t0\t0\t0\tYES\n")
+                    BMGE_lines_split.append(str(spm) + "\tSomething went wrong with BMGE.\n")
 
                     # LOG #####################################################
                     logger.info('BMGE did not finished for ' + str(spm) +
@@ -979,11 +1012,7 @@ for sp in splitted_pipeline:
                     ###########################################################
 
             r_lines = []
-            # aca hay algo raro, no se xq se llama asi v02
-            # dejo comentado como deberia llamarse para que sea coherente con 
-            # los otros modulos
-            #r1 = open(str(spm) + '_' + str(real_fasta) + '_removed.txt', 'r') 
-            r1 = open(str(spm) + '_removed_' + str(real_fasta) + '.txt', 'r')
+            r1 = open(str(spm) + '_' + str(real_fasta) + '_removed.txt', 'r')
             
             for line in r1:
                 r_lines.append(line)
@@ -1080,8 +1109,8 @@ for sp in splitted_pipeline:
                 ###############################################################
 
                 try:
-                    lib.BMGE(temp_CGSR, BMGE, "BMGE_output.txt")
-                    BMGE_alert, seq_bef, BMGE_bef, seq_aft, BMGE_aft = lib.BMGE_reader("BMGE_output.txt")
+                    lib.BMGE(bmge_version,temp_CGSR, BMGE, "BMGE_output.txt")
+                    BMGE_alert, seq_bef, seq_aft, BMGE_bef, BMGE_aft = lib.BMGE_reader(bmge_version,"BMGE_output.txt")
 
                     BMGE_lines_split.append(str(spm) + "\t" + str(seq_bef) + "\t" + str(seq_aft) + "\t" + str(BMGE_bef) + "\t" + str(BMGE_aft) + "\t" + str(BMGE_alert) + "\n")
 
@@ -1093,7 +1122,7 @@ for sp in splitted_pipeline:
                     ###########################################################
 
                 except:
-                    BMGE_lines_split.append(str(spm) + "\t0\t0\t0\t0\tYES\n")
+                    BMGE_lines_split.append(str(spm) + "\tSomething went wrong with BMGE.\n")
 
                     # LOG #####################################################
                     logger.info('BMGE did not finished for ' + str(spm) +
@@ -1162,7 +1191,7 @@ for sp in splitted_pipeline:
         ') initiated - Total time: ' + str((datetime.now() - startTime)))
         #######################################################################
 
-        PR_removed, PR_removed_file, PR_remain, PR_fsa, PR_faa = lib.PR(fasta_file, a5, ali)
+        PR_removed, PR_removed_file, PR_remain, PR_fsa, PR_faa = lib.PR(fasta_file, s5, a5, ali)
 
         if PR_removed == []:
 
@@ -1189,8 +1218,8 @@ for sp in splitted_pipeline:
                 ###############################################################
 
                 try:
-                    lib.BMGE(PR_faa, BMGE, "BMGE_output.txt")
-                    BMGE_alert, seq_bef, BMGE_bef, seq_aft, BMGE_aft = lib.BMGE_reader("BMGE_output.txt")
+                    lib.BMGE(bmge_version,PR_faa, BMGE, "BMGE_output.txt")
+                    BMGE_alert, seq_bef, seq_aft, BMGE_bef, BMGE_aft = lib.BMGE_reader(bmge_version,"BMGE_output.txt")
 
                     BMGE_lines_split.append(str(spm) + "\t" + str(seq_bef) + "\t" + str(seq_aft) + "\t" + str(BMGE_bef) + "\t" + str(BMGE_aft) + "\t" + str(BMGE_alert) + "\n")
 
@@ -1202,7 +1231,7 @@ for sp in splitted_pipeline:
                     ###########################################################
 
                 except:
-                    BMGE_lines_split.append(str(spm) + "\t0\t0\t0\t0\tYES\n")
+                    BMGE_lines_split.append(str(spm) + "\tSomething went wrong with BMGE.\n")
 
                     # LOG #####################################################
                     logger.info('BMGE did not finished for ' + str(spm) +
@@ -1314,13 +1343,21 @@ for mf in move_files:
         os.system("cp " + str(mf) + " " + str(dst))
 
 os.system("mv Seqrutinator_" + str(real_fasta) + ".log " + str(dst))
-os.system("cp " + str(real_fasta) + "_BMGE_table.csv " + str(dst))
-os.system("rm hmm_*")
-os.system("rm hmms_*")
-os.system("rm Mafft_*")
-os.system("mv Results_" + str(real_fasta) + "/SSR* " + str(sst))
-os.system("mv Results_" + str(real_fasta) + "/NHHR* " + str(nst))
-os.system("mv Results_" + str(real_fasta) + "/GIR* " + str(gst))
-os.system("mv Results_" + str(real_fasta) + "/CGSR* " + str(cst))
-os.system("mv Results_" + str(real_fasta) + "/PR* " + str(pst))
-#os.system("cp " + str(dst) + "/" + str(fasta_file) + " " + str(path))
+
+
+
+for sp in splitted_pipeline:
+    if sp == '1':
+        os.system("mv Results_" + str(real_fasta) + "/SSR* " + str(sst))
+    if sp == '2':
+        os.system("mv Results_" + str(real_fasta) + "/NHHR* " + str(nst))
+    if sp == '3':
+        os.system("mv Results_" + str(real_fasta) + "/GIR* " + str(gst))
+    if sp == '4':
+        os.system("mv Results_" + str(real_fasta) + "/CGSR* " + str(cst))
+    if sp == '5':
+        os.system("mv Results_" + str(real_fasta) + "/PR* " + str(pst))
+        os.system("rm hmm_*")
+        os.system("rm hmms_*")
+if BMGE > 0:
+    os.system("cp " + str(real_fasta) + "_BMGE_table.csv " + str(dst))
