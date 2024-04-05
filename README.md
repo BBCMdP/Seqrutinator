@@ -1,5 +1,25 @@
 # Seqrutinator
 
+- [Seqrutinator](#seqrutinator)
+  - [Introduction](#introduction)
+  - [MUFASA (MUltiple FASta Aligner)](#mufasa-multiple-fasta-aligner)
+    - [Usage](#usage)
+    - [Options](#options)
+  - [Seqrutinator](#seqrutinator-1)
+    - [Usage](#usage-1)
+    - [Options](#options-1)
+    - [Modules](#modules)
+      - [Module 1: The Short Sequence Remover Module](#module-1-the-short-sequence-remover-module)
+      - [Module 2: The Non-Homologous Hit Remover Module](#module-2-the-non-homologous-hit-remover-module)
+      - [Module 3: The Gap Instigator Remover](#module-3-the-gap-instigator-remover)
+      - [Module 4: The Continuous Gap Sequence Remover](#module-4-the-continuous-gap-sequence-remover)
+      - [Module 5: The Pseudogene Remover](#module-5-the-pseudogene-remover)
+  - [SeqYNet](#seqynet)
+    - [Materials and Methods](#materials-and-methods)
+    - [Usage](#usage-2)
+    - [Options](#options-2)
+  - [References](#references)
+
 Seqrutinator is an objective, flexible pipeline for the scrutiny of sequence sets from complex, eukaryotic protein superfamilies. It removes sequences from pseudogenes, incorrect gene models or with sequencing errors. Testing Seqrutinator on major superfamilies BAHD, CYP and UGT correctly removed 1.94% of SwissProt entries, 14% of entries from the model plant _Arabidopsis thaliana_ but 80% of entries from _Pinus taeda_’s recent complete proteome. Most of the removed sequences were partial. The scrutiny of BAHDomes, CYPomes and UGTomes obtained from 16 plant proteomes show consistent numbers suggesting good performance. MSAs, phylogenies and particularly functional clustering improved drastically upon Seqrutinator application.
 
 Seqrutinator is under review but can be accessed as preprint at https://doi.org/10.1101/2022.03.22.485366
@@ -180,7 +200,7 @@ $ python3 seq_renamer.py -h
 seq_renamer.py [-h] [-i I] [-id ID]
 ```
 
-### Options:
+### Options
 ```bash
   -h, --help  show this help message and exit
   -i I        Fasta file
