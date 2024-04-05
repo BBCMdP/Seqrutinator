@@ -1,7 +1,5 @@
 # Seqrutinator
 
-### Public Repo for the Seqrutinator tool and its python dependencies
-
 Seqrutinator is an objective, flexible pipeline for the scrutiny of sequence sets from complex, eukaryotic protein superfamilies. It removes sequences from pseudogenes, incorrect gene models or with sequencing errors. Testing Seqrutinator on major superfamilies BAHD, CYP and UGT correctly removed 1.94% of SwissProt entries, 14% of entries from the model plant _Arabidopsis thaliana_ but 80% of entries from _Pinus taeda_’s recent complete proteome. Most of the removed sequences were partial. The scrutiny of BAHDomes, CYPomes and UGTomes obtained from 16 plant proteomes show consistent numbers suggesting good performance. MSAs, phylogenies and particularly functional clustering improved drastically upon Seqrutinator application.
 
 Seqrutinator is under review but can be accessed as preprint at https://doi.org/10.1101/2022.03.22.485366
@@ -11,17 +9,23 @@ Below you will find the contents of Supplemental document 1, which is basically 
 ## Introduction
 Seqrutinator is a modular pipeline written in Python 3 to identify and remove protein superfamily sequences that likely either correspond to a non-functional homologue (NFH) or are incorrect, the latter due to either sequencing or gene modelling errors. Seqrutinator is made for complex single-domain protein superfamilies. It requires intermediate or large datasets (~>50 input sequences). This document describes in detail how the modules function, how the pipeline is made and which outputs are generated. Seqrutinator requires a single input file with the sequence set in fasta format, either aligned or not. Dependencies are described/listed in Materials and Methods, which includes shell commands that are used to run software packages such as MAFFT.
 
-Each module is accessed by a number, according to the default pipeline 12345: 1) Short Sequence Remover (SSR) → 2) Non-Homologous Hit Remover (NHHR) → 3) Gap Instigator Remover (GIR) → 4) Continuous Gap Sequence Remover → 5) Pseudogene Remover (PR). Modules 2 to 5 need an MSA as input but when applied as first module, the script automatically aligns the sequences if they are not aligned. We recommend the user trims the MSA such that it represents the mature protein and lacks non-homologous terminal sequences. 
-Seqrutinator is therefore accompanied by MUFASA (MUltiple FASta Aligner) which is used to obtain the initial crude but aligned sequence set. For trimming and in order to include a general reference we recommend aligning a single sequence for which a structure has been resolved to the MSA by means of `mafft --add`. Seqrutinator can be applied in batch (i.e. using multiple input files) using an additional script named SeqYNet. All three scripts are described below. Descriptions concern the default settings but we describe many options to overrule default settings. 
+Each module is accessed by a number, according to the default pipeline 12345: 1) Short Sequence Remover (SSR) → 2) Non-Homologous Hit Remover (NHHR) → 3) Gap Instigator Remover (GIR) → 4) Continuous Gap Sequence Remover → 5) Pseudogene Remover (PR). Modules 2 to 5 need an MSA as input but when applied as first module, the script automatically aligns the sequences if they are not aligned. We recommend the user trims the MSA such that it represents the mature protein and lacks non-homologous terminal sequences.
+Seqrutinator is therefore accompanied by MUFASA (MUltiple FASta Aligner) which is used to obtain the initial crude but aligned sequence set. For trimming and in order to include a general reference we recommend aligning a single sequence for which a structure has been resolved to the MSA by means of `mafft --add`. Seqrutinator can be applied in batch (i.e. using multiple input files) using an additional script named SeqYNet. All three scripts are described below. Descriptions concern the default settings but we describe many options to overrule default settings.
 
-### MUFASA (MUltiple FASta Aligner)
+## MUFASA (MUltiple FASta Aligner)
 
 MUFASA performs hmmsearch and aligns positively identified sequences. It only comes with options regarding input files as demonstrated by:
-```bash 
+```bash
 $ python3 MUFASA.py -h
-usage: MUFASA.py [-h] [-i I] [-ext EXT] [-c C] [-r R] [-t T]
+```
 
-options:
+### Usage
+```bash
+MUFASA.py [-h] [-i I] [-ext EXT] [-c C] [-r R] [-t T]
+```
+
+### Options
+```bash
   -h, --help  show this help message and exit
   -i I        HMMER profile, default = hmm_profile
   -ext EXT    Target files extension. default = *.fsa
@@ -30,20 +34,20 @@ options:
   -t T        Trimming N- and C-end based on reference's positions i-j (residues i and j will be conserved)
 ```
 
-MUFASA takes as input a single HMMER profile and performs separate hmmsearch of all fasta files available in the same folder as where MUFASA is executed. By default, all files with extension `fsa` will be used as input sequence set and `hmm_profile` is the default HMMER profile. For each input sequence set, it fetches all identified sequences and saves them in a single fasta file, which represent a superfamily proteome. Next, all obtained superfamily proteomes are separately aligned using MAFFT G-INS-i. 
+MUFASA takes as input a single HMMER profile and performs separate hmmsearch of all fasta files available in the same folder as where MUFASA is executed. By default, all files with extension `fsa` will be used as input sequence set and `hmm_profile` is the default HMMER profile. For each input sequence set, it fetches all identified sequences and saves them in a single fasta file, which represent a superfamily proteome. Next, all obtained superfamily proteomes are separately aligned using MAFFT G-INS-i.
 Example:
-```
+```bash
 $ python3 MUFASA.py -i PF02458.hmm -ext '*.fsa'
 ```
-It will use the hmmer profile PF02458.hmm to run hmmsearch using on each file with extension `.fsa`. The outputs provided by this module are shown in Table 1. Note that each type of output will be stored in a dedicated folder. 
+It will use the hmmer profile PF02458.hmm to run hmmsearch using on each file with extension `.fsa`. The outputs provided by this module are shown in Table 1. Note that each type of output will be stored in a dedicated folder.
 
 In addition, since typically N- and C-end regions tend to be more variable (e.g., signal peptides), we recommend trimming these regions before to run Seqrutinator.
 It is highly recommended to use the same reference sequence, which should be well characterized biochemically and physiologically, and which structure has been resolved (highly recommended).
-MUFASA includes a module that can do this. This module is activated by incorporate one reference sequence in fasta format (with a different extension as the proteomes explored in the first module) using the argument `-r`. This reference sequence will be added to the MSA with all the homologues detected by MUFASA in each proteome (using MAFFT-add). 
+MUFASA includes a module that can do this. This module is activated by incorporate one reference sequence in fasta format (with a different extension as the proteomes explored in the first module) using the argument `-r`. This reference sequence will be added to the MSA with all the homologues detected by MUFASA in each proteome (using MAFFT-add).
 Finally, following the coordinates given with argument `-t i-j`, the script will trim the MSA based on residues i and j from the reference sequence (columns upstream i and downstream j will be removed). The results after MAFFT-add and after trimming are stored (see Table 1).
 
 Example:
-```
+```bash
 $ python3 MUFASA.py -i PF02458.hmm -ext '*.fsa' -r 4G0B.fa -t 4-432
 ```
 The module MUFASA will operate as described before. Since `-r` is called, the sequence in fasta file `4G0B` will be added to each `*.faa` file (generated by module MUFASA) using MAFFT-add, yielding `*_add.faa` files. The latter will be used to trim N- and C-ends using positions 4 and 432 from the reference sequence, resulting in `*._trim.faa` files.
@@ -51,15 +55,20 @@ The module MUFASA will operate as described before. Since `-r` is called, the se
 ![image](https://github.com/BBCMdP/Seqrutinator/assets/45858786/680b7a3b-962b-49cf-8b8c-36c397eca569)
 >Table 1: Input and Output of MUFASA
 
-### Seqrutinator
+## Seqrutinator
 Seqrutinator is a fully flexible, modular pipeline. It consists of a main python script with the actual modules and some recurring algorithms in a python module (lib_seqrutinator.py). Seqrutinator comes with a large number of options. Parameters have numbers according to the number of the module, Parameters that are not numbered are general. Parameters are as demonstrated by:
 
 ```bash
 $ python3 seqrutinator.py -h
-usage: seqrutinator.py [-h] [-m M] [-f F] [-ali ALI] [-ref1 REF1] [-ref2 REF2] [-bv BV] [-BMGE BMGE] [-p1 P1] [-p2 P2]
+```
+### Usage
+```bash
+seqrutinator.py [-h] [-m M] [-f F] [-ali ALI] [-ref1 REF1] [-ref2 REF2] [-bv BV] [-BMGE BMGE] [-p1 P1] [-p2 P2]
                        [-s2 S2] [-a2 A2] [-m3 M3] [-p3 P3] [-aa3 AA3] [-p4 P4] [-aa4 AA4] [-a5 A5] [-s5 S5]
+```
 
-options:
+### Options
+```bash
   -h, --help  show this help message and exit
   -m M        Pipelines
   -f F        Fasta file (NOTE THAT THIS IS A REQUIRED PARAMETER)
@@ -81,13 +90,14 @@ options:
   -s5 S5      Mean - alphaSD (1) or Q1 - 1.5IQR (2) for PR
 ```
 
+### Modules
 #### Module 1: The Short Sequence Remover Module
 SSR opens the offered fasta file and determines the length l of the first sequence,  the default reference sequence. This can be overruled by `ref1` or `ref2`. Next, it determines the length of each sequence and separately saves good and bad sequences using the default threshold of `0.65*l`, which can be overruled by `p1`. Good sequences are aligned by MAFFT G-INS-i. The additional output consists of a file that contains the accession codes of the removed sequences and a file that shows the inclusion threshold and the lengths of the removed sequences.
 
 #### Module 2: The Non-Homologous Hit Remover Module
 NHHR removes outliers identified by low HMMER score. It constructs a HMMER profile of the input MSA and uses it to run a hmmsearch against the unaligned sequences. It directly removes all sequences with score=0 and then uses the total scores of the sequences to perform a distribution analysis. In order to prevent removing short sequences (in case SSR does not precede NHHR in the applied pipe), sequences shorter than 65% (overrule by `p2`) of the reference sequence are excluded from this analysis. It determines the mean and the standard deviation of all the data in the array.
 Finally, it determines which sequences score below and which above the threshold, set at 3σ, and saves removed and accepted sequences separately, accepted sequences are aligned. NHHR is not iterated since its objective is to remove sequences that are not homologous and will be removed in a single screening, under the assumption that they score low. The additional output consists a file that contains the accession codes of the removed sequences, the hmmsearch ouputs and a plot that shows a distribution of the calculated scores with the applied cut-off threshold.
-Threshold settings can be overruled. Any value alpha can be used for the sigma rule (`a2`). Alternatively, the cut-off can be based on interquartiles (`s2`). The Inter Quartile Range or IQR is defined as the difference between the middle of the first half of the sequence scores and the middle of the second half of the sequence scores. This provides another measure that is often used to define outliers, such as the lower 1.5 * Inter Quartile Range (IQR) whisker (< `Q1 – 1.5 x IQR`). 
+Threshold settings can be overruled. Any value alpha can be used for the sigma rule (`a2`). Alternatively, the cut-off can be based on interquartiles (`s2`). The Inter Quartile Range or IQR is defined as the difference between the middle of the first half of the sequence scores and the middle of the second half of the sequence scores. This provides another measure that is often used to define outliers, such as the lower 1.5 * Inter Quartile Range (IQR) whisker (< `Q1 – 1.5 x IQR`).
 
 #### Module 3: The Gap Instigator Remover
 GIR removes sequences that instigate large (>29, overrule using `aa3`) gaps as detected in the offered MSA. This comes with two uncertainties of which only the firts one is tackled automatically. A “sequence-specific insert” does in general not instigate the same gap in all other sequences. Since the subsequence of the insert contains information that is used by MAFFT in the MSA reconstruction, residues and or subsequences from other sequences will be aligned to the sequence-specific insert. As such, we define the majority gap column, where majority means > 90% (overule by `p3`) of the sequences. GIR determines which columns are majority gap columns, subsequently scans the MSA and computes the number of continuous regions of majority gap columns. Secondly, in complex cases one or more conserved residues may align somewhere in the instigated gap, thereby splitting it in two smaller gaps. GIR makes two counts. The continuous gap score resembles the local alignment score: it sums up as the majority gap continues, but drops to zero when a normal column is encountered. The combined gap score resembles the global alignment score: it sums and simply distracts each normal column that is encountered. The continuous gap score is used for the automated identification of GIR-NFH. The combined gap score is merely reported as part of the graphical output that is generated for each iteration and as is described in the main text. It can be used for the manual removal of additional sequences. GIR removes the sequence that has the gap with the highest continuous gap score above the threshold and saves and aligns the remaining sequences in order to iterate the procedure. By default GIR is a one-by-one (overrule `m3`) sequence remover with iteration.
@@ -99,9 +109,11 @@ As a final remark, similar to what can happen to a sequence-specific insert, seq
 #### Module 5: The Pseudogene Remover
 The pseudogene remover is the same outlier remover as NHHR except that it is iterated.  PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default σ3, it presents the σ2 threshold, the upper `1.5*IQR` whisker (> `Q3 + 1.5 IQR`) and the major score-drop Δmax as putative cut-off threshold. Application of the major score drop corresponds to the idea that non-outliers (read functional homologues under functional constraint) evolve with similar evolutionary rates which results in a continuous HMMER score distribution whereas NFHs lack the constraint and will evolve faster and show much lower scores. In certain cases, the major score drop can sometimes detect this. Note however that the dataset supposedly contains sequences from various subfamilies that have somewhat different constraints and that this can also result in large score-drops. The more complex a superfamily is, the less reliable it is to use the largest score-drop as cut-off. Hence, the largest score drop should only be applied when it occurs at or near one of the other three thresholds.
 
-> **Example:** 
-`python3 seqrutinator.py -f sample.fsa -m 1324 -p1 0.85 -m2 2 s2 2 -a2 5 -m3 2 -p3 0.8 -aa3 35 -p4 0.85`
->>Runs seqrutinator in the order SSR-GIR-NHHR-CGSR, hence it will remove sequences <85% of the length of the first sequence in sample.fsa, it will then iteratively remove sequences that instigate gap regions of 35 (where a gap column has more than 80% gaps) in batch mode. Next it removes sequences with gap regions of > 30 where 85% of the sequences are allowed to also have a gap at the same column. Do note that the latter is actually not a good idea since it can result in the exclusion of a sequence that has a large gap in the MSA where many sequences actually have gaps.
+**Example:**
+```bash
+python3 seqrutinator.py -f sample.fsa -m 1324 -p1 0.85 -m2 2 s2 2 -a2 5 -m3 2 -p3 0.8 -aa3 35 -p4 0.85
+```
+>Runs seqrutinator in the order SSR-GIR-NHHR-CGSR, hence it will remove sequences <85% of the length of the first sequence in sample.fsa, it will then iteratively remove sequences that instigate gap regions of 35 (where a gap column has more than 80% gaps) in batch mode. Next it removes sequences with gap regions of > 30 where 85% of the sequences are allowed to also have a gap at the same column. Do note that the latter is actually not a good idea since it can result in the exclusion of a sequence that has a large gap in the MSA where many sequences actually have gaps.
 
 
 | Module & Iterate | Input*            | Output                                                                                                                                                                                                                                                                                |||
@@ -117,67 +129,72 @@ The pseudogene remover is the same outlier remover as NHHR except that it is ite
 | PR I1            | CGSR_X_bug1.faa   | PR_bug1_It1.hmm***  PR_bug1_data_It1.txt  PR_bug1_plot_It1.png                                                        | hmmer profile  hmmsearch output  Elaborate score plot                                                   | PR_It1_bug1.fsa; faa****                              |
 | PR I2            | PR_1_bug1.faa     | PR_bug1_data_2.txt                                                                                                    |                                                                                                         | PR_It2_bug1.fsa; faa  PR_bug1_removed.txt; .fsa       |
 |                  |                   |                                                                                                                       |                                                                                                         | Result_big1.faa*****                                  |
->Table 2: Input and output generated by default Seqrutinator pipeline. GIR, CGSR and PR are principly iterated, shown are the results with two iterations. 
-*If no sequences are removed by the last applied module, the MSA of the former module is used. 
-**Only the final dataset is saved 
+>Table 2: Input and output generated by default Seqrutinator pipeline. GIR, CGSR and PR are principly iterated, shown are the results with two iterations.
+*If no sequences are removed by the last applied module, the MSA of the former module is used.
+**Only the final dataset is saved
 ***Only the last HMMER profile of PR iterations is saved
-****Not made when no sequences are removed 
+****Not made when no sequences are removed
 *****Identical to the last MSA. X stands for the number of the last iteration of the former module.
 
 
-At the end of each module seqrutinator performs a BMGE test that determines the number of columns before and after trimming and saves the numbers in a tsv file. The rationale of this is explained in the main text of the manuscript. 
+At the end of each module seqrutinator performs a BMGE test that determines the number of columns before and after trimming and saves the numbers in a tsv file. The rationale of this is explained in the main text of the manuscript.
 
-### SeqYNet
+## SeqYNet
 
 The additional script SeqYNet.py can be used to run Seqrutinator with multiple input files at once. Both scripts, the library and the set of fasta files, each prepared as explained, are to be placed in the same folder. All input files must have the extension fasta for running: The SeqYNet script comes with the same options and results for each fasta file will be saved in different subfolders, named on the base of the input fasta file.
 
 ---
-_Materials and Methods_
+### Materials and Methods
 
-**Alignments**. MUFASA and Seqrutinator use by default MAFFT G-INS-i: 
+**Alignments**. MUFASA and Seqrutinator use by default MAFFT G-INS-i:
 `mafft --reorder --maxiterate 1000 --retree 1 --globalpair <input.fsa> <output.faa>`
 MAFFT[^a]⁠ can be installed to most Linux systems using Synaptic or is otherwise available at the MAFFT website[^b]⁠.
 Note that MAFFT G-INS-i comes with a heavy computational cost. For very large datasets (e.g. > 500 sequences of ~400 aa) we recommend to use FAMSA[^c], which is an available option. FAMSA should be made executable in the same folder. FAMSA can be obtained from its Github repository[^d]⁠.
 
-**Block Mapping and Gathering of Entropy**[^f]⁠. The pipeline and modules execute the command 
-`java -jar BMGE.jar -i <msa.faa> -h 0.8`					
-Make sure the executable file BMGE.jar. By default, Seqrutinator assumes BMGE version used is 1 (either v 1.0 or 1.12).  
+**Block Mapping and Gathering of Entropy**[^f]⁠. The pipeline and modules execute the command
+`java -jar BMGE.jar -i <msa.faa> -h 0.8`
+Make sure the executable file BMGE.jar. By default, Seqrutinator assumes BMGE version used is 1 (either v 1.0 or 1.12).
 Note that the command uses standard settings except for the entropy that is set to 0.8. Note that the actual trimming is not performed. We recommend BMGE version 1 that can be obtained from the Pasteur Institute [^g]⁠. The jar-file should be in the same directory as where Seqrutinator is execute.
 Note, however, that version 2.0[^i] can also be used (set the argument BMGE version `-bv 2` if this is the case).
 
 **HMMER**[^h]. Installation via Synaptic is available. The outlier removers use HMMER modules⁠ with the following commands:
-`hmmbuild --informat afa --amino <output.hmm> <input.faa>`	
+`hmmbuild --informat afa --amino <output.hmm> <input.faa>`
 `hmmsearch --noali –tblout <output.txt> <input.fsa>`
 
 **Python packages**. The `requirements.txt` file can be used to install the required python3 packages. Run for example:
 
-```
+```bash
 $ pip install -r requirements.txt
 ```
 
 _Additional script_
 **seq_renamer.py**
-Sequences in fasta file may often times contain characters that are incompatible not only with Seqrutinator's dependencies (as whitespaces for hmmer), but also for downstream applications (e.g., dots are replaced by underscores by PhyML). In addition, if names are long can be chopped to a short string by other programs (such as cd-hit). This name format hell makes analysis of sequences data generated by different softwares quite challenging. 
-To overcome this, here we provide the script `seq_renamer.py` which allows the renaming of all sequences in a fasta file to a name with 10 characters. The user can add a text string that enables the quick identification of the sequences by the user. We recommend a string of 3 characters, which will be extended to the final 10 characters by an increasing integer. The outputs are a fasta file with the renamed sequences, and a file with an index matching the new names with the original names.  
+Sequences in fasta file may often times contain characters that are incompatible not only with Seqrutinator's dependencies (as whitespaces for hmmer), but also for downstream applications (e.g., dots are replaced by underscores by PhyML). In addition, if names are long can be chopped to a short string by other programs (such as cd-hit). This name format hell makes analysis of sequences data generated by different softwares quite challenging.
+To overcome this, here we provide the script `seq_renamer.py` which allows the renaming of all sequences in a fasta file to a name with 10 characters. The user can add a text string that enables the quick identification of the sequences by the user. We recommend a string of 3 characters, which will be extended to the final 10 characters by an increasing integer. The outputs are a fasta file with the renamed sequences, and a file with an index matching the new names with the original names.
 
+```bash
+$ python3 seq_renamer.py -h
 ```
-$ python3 seq_renamer.py -h                                                                                                         
-usage: seq_renamer.py [-h] [-i I] [-id ID]
+### Usage
+```bash
+seq_renamer.py [-h] [-i I] [-id ID]
+```
 
-options:
+### Options:
+```bash
   -h, --help  show this help message and exit
   -i I        Fasta file
   -id ID      ID Key sequence name
 ```
 
-```
+```bash
 $ python3 seq_renamer.py -i Ecoli.fasta -id eco
 Execution Successful: 0:00:00.033954
 ```
 yields two files: a fasta file with the renamed sequences `Ecoli_renamed.fsa` and a text file `Ecoli_file_map`, which contains an index of new and original names.
 An extract of the results:
-```
-$ head Ecoli_renamed.fsa -n 8             
+```bash
+$ head Ecoli_renamed.fsa -n 8
 >eco0000001
 MTHIVRFIGLLLLNASSLRGRRVSGIQH
 >eco0000002
@@ -188,8 +205,8 @@ MHAYLHCLSHSPLVGYVDPAQEVLDEVNGVIASARERIAAFSPELVVLFAPDHYNGFFYDVMPPFCLGVGATAIGDFGSA
 MYYLKNTNFWMFGLFFFFYFFIMGAYFPFFPIWLHDINHISKSDTGIIFAAISLFSLLFQPLFGLLSDKLGLRKYLLWIITGMLVMFAPFFIFIFGPLLQYNILVGSIVGGIYLGFCFNAGAPAVEAFIEKVSRRSNFEFGRARMFGCVGWALCASIVGIMFTINNQFVFWLGSGCALILAVLLFFAKTDAPSSATVANAVGANHSAFSLKLALELFRQPKLWFLSLYVIGVSCTYDVFDQQFANFFTSFFATGEQGTRVFGYVTTMGELLNASIMFFAPLIINRIGGKNALLLAGTIMSVRIIGSSFATSALEVVILKTLHMFEVPFLLVGCFKYITSQFEVRFSATIYLVCFCFFKQLAMIFMSVLAGNMYESIGFQGAYLVLGLVALGFTLISVFTLSGPGPLSLLRRQVNEVA
 ```
 
-```
-$ head Ecoli_file_map -n 4                
+```bash
+$ head Ecoli_file_map -n 4
 eco0000001 	 WP_001300467.1 MULTISPECIES: leu operon leader peptide [Enterobacteriaceae]
 eco0000002 	 WP_000478195.1 MULTISPECIES: DUF3302 domain-containing protein [Enterobacteriaceae]
 eco0000003 	 WP_000543457.1 MULTISPECIES: 2,3-dihydroxyphenylpropionate/2,3-dihydroxicinnamic acid 1,2-dioxygenase [Bacteria]
@@ -199,11 +216,12 @@ We recommend running the script before running the sensitive search with `MUFASA
 
 - Dependencies of Seqrutinator are indicated in the script.
 
-[^a]: K. Katoh and D. M. Standley, “MAFFT Multiple Sequence Alignment Software Version 7: Improvements in Performance and Usability,” Mol. Biol. Evol., vol. 30, no. 4, pp. 772–780, Apr. 2013, doi: 10.1093/molbev/mst010.
-[^b]: https://mafft.cbrc.jp/alignment/server/.
-[^c]: S. Deorowicz, A. Debudaj-Grabysz, and A. Gudys, “FAMSA: Fast and accurate multiple sequence alignment of huge protein families,” Sci. Rep., vol. 6, no. 1, pp. 1–13, Sep. 2016, doi: 10.1038/srep33964.
-[^d]: https://github.com/refresh-bio/FAMSA/.
-[^f]: A. Criscuolo and S. Gribaldo, “BMGE (Block Mapping and Gathering with Entropy): A new software for selection of phylogenetic informative regions from multiple sequence alignments,” BMC Evol. Biol., vol. 10, no. 1, pp. 1–21, Jul. 2010, doi: 10.1186/1471-2148-10-210/FIGURES/9.
-[^g]: ftp://ftp.pasteur.fr/pub/gensoft/projects/BMGE/
-[^h]: S. R. Eddy, “Accelerated Profile HMM Searches,” PLOS Comput. Biol., vol. 7, no. 10, p. e1002195, 2011, doi: 10.1371/JOURNAL.PCBI.1002195.
-[^i]: https://gitlab.pasteur.fr/GIPhy/BMGE
+## References
+1. K. Katoh and D. M. Standley, “MAFFT Multiple Sequence Alignment Software Version 7: Improvements in Performance and Usability,” Mol. Biol. Evol., vol. 30, no. 4, pp. 772–780, Apr. 2013, doi: 10.1093/molbev/mst010.
+2. https://mafft.cbrc.jp/alignment/server/.
+3. S. Deorowicz, A. Debudaj-Grabysz, and A. Gudys, “FAMSA: Fast and accurate multiple sequence alignment of huge protein families,” Sci. Rep., vol. 6, no. 1, pp. 1–13, Sep. 2016, doi: 10.1038/srep33964.
+4. https://github.com/refresh-bio/FAMSA/.
+5. A. Criscuolo and S. Gribaldo, “BMGE (Block Mapping and Gathering with Entropy): A new software for selection of phylogenetic informative regions from multiple sequence alignments,” BMC Evol. Biol., vol. 10, no. 1, pp. 1–21, Jul. 2010, doi: 10.1186/1471-2148-10-210/FIGURES/9.
+6. ftp://ftp.pasteur.fr/pub/gensoft/projects/BMGE/
+7. S. R. Eddy, “Accelerated Profile HMM Searches,” PLOS Comput. Biol., vol. 7, no. 10, p. e1002195, 2011, doi: 10.1371/JOURNAL.PCBI.1002195.
+8. https://gitlab.pasteur.fr/GIPhy/BMGE
