@@ -41,7 +41,7 @@ parser.add_argument('-p1', default=0.65, help='Proportion of sequence length cov
 # Module 2: NHHR
 parser.add_argument('-p2', default=0.65, help='Proportion of sequence length coverage for NHHR (0 to  1)')
 parser.add_argument('-m2', default=1, help='HMMER Score (1) or TCS (2) method for NHHR ')
-parser.add_argument('-s2', default=1, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2)")
+parser.add_argument('-s2', default=2, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2)")
 parser.add_argument('-a2', default=3, help='Alpha for NHHR')
 
 # Module 3: GIR
@@ -55,7 +55,7 @@ parser.add_argument('-aa4', default=30, help='aa window of contiguos gap columns
 
 # Module 5: OR
 parser.add_argument('-a5', default=3, help='Alpha for mean - alphaSD (3 is recommended as befault option and 2.35 for normal distributions)')
-parser.add_argument('-s5', default=1, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2)')
+parser.add_argument('-s5', default=2, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2)')
 
 args = vars(parser.parse_args())
 
@@ -146,7 +146,7 @@ if p2 != 0.65:
 if m2 != 1:
     command_parameters.append("-m2 " + str(m2))
 
-if s2 != 1:
+if s2 != 2:
     command_parameters.append("-s2 " + str(s2))
 
 if a2 != 3:
@@ -172,7 +172,7 @@ if aa4 != 30:
 # Module 5: PR
 if a5 != 3:
     command_parameters.append("-a5 " + str(a5))
-if s5 != 1:
+if s5 != 2:
     command_parameters.append("-s5 " + str(s5))
 
 print(command_parameters)
