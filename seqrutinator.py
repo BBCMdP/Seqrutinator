@@ -51,7 +51,7 @@ parser.add_argument('-p1', default=0.65, help='Proportion (0 to 1) of sequence l
 
 # Module 2: NHHR
 parser.add_argument('-p2', default=0.65, help='Proportion (0 to 1) of sequence length coverage for NHHR')
-parser.add_argument('-s2', default=1, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2) for NHHR")
+parser.add_argument('-s2', default=2, help="Mean - alphaSD (1) or Q1 - 1.5IQR (2) for NHHR")
 parser.add_argument('-a2', default=3, help='Alpha for NHHR')
 
 # Module 3: GIR
@@ -65,7 +65,7 @@ parser.add_argument('-aa4', default=30, help='aa window of contiguos gap columns
 
 # Module 5: PR
 parser.add_argument('-a5', default=3, help='Alpha for mean - alphaSD (3 is recommended as default option and 2.35 for normal distributions)')
-parser.add_argument('-s5', default=1, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2) for PR')
+parser.add_argument('-s5', default=2, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2) for PR')
 
 args = vars(parser.parse_args())
 
