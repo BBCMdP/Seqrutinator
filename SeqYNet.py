@@ -110,6 +110,11 @@ pre_fasta_list = []
 
 filelist = lib.input_files(ext)
 
+if len(filelist) == 0:
+    print('ERROR: There are no input files with the extension indicated by -ext. Please check the command.')
+    parser.print_help()
+    sys.exit()
+
 for ff in filelist:
     if "hmms_" not in ff and "Mafft_" not in ff:
         pre_fasta_list.append(ff)
