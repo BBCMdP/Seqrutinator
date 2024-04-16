@@ -38,8 +38,8 @@ path = os.path.dirname(os.path.abspath(__file__))
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('-m', default='12345', help='Pipelines')
 parser.add_argument('-f', help='Fasta file (NOTE THAT THIS IS A REQUIRED PARAMETER)')
+parser.add_argument('-m', default='12345', help='Pipelines')
 parser.add_argument('-ali', default=1, help='Use MAFFT G-INS-i (1); Use either MAFFT G-INS-i (n<=500) or Global (n>500) (2); Use FAMSA, recommended only for really large datasets (3)')
 parser.add_argument('-ref1', default='first_seq', help='Use to change input reference sequence')
 parser.add_argument('-ref2', default=0, help='Use to directly input reference sequence length')
@@ -70,8 +70,13 @@ parser.add_argument('-s5', default=2, help='Mean - alphaSD (1) or Q1 - 1.5IQR (2
 args = vars(parser.parse_args())
 
 # General Parameters
-pipeline = str(args['m'])  # Terminal Condition
+if args['f'] == None:
+    print('ERROR: argument -f is required to indicate the input fasta file')
+    parser.print_help()
+    sys.exit()
+
 fasta_file = str(args['f'])  # TC
+pipeline = str(args['m'])  # Terminal Condition
 ali = int(args['ali'])
 BMGE = float(args['BMGE'])
 bmge_version = int(args['bv'])
