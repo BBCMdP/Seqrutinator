@@ -1,5 +1,8 @@
 # Seqrutinator
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10980626.svg)](https://doi.org/10.5281/zenodo.10980626)
+
+
 - [Seqrutinator](#seqrutinator)
   - [Introduction](#introduction)
   - [MUFASA (MUltiple FASta Aligner)](#mufasa-multiple-fasta-aligner)
@@ -116,8 +119,8 @@ SSR opens the offered fasta file and determines the length l of the first sequen
 
 #### Module 2: The Non-Homologous Hit Remover Module
 NHHR removes outliers identified by low HMMER score. It constructs a HMMER profile of the input MSA and uses it to run a hmmsearch against the unaligned sequences. It directly removes all sequences with score=0 and then uses the total scores of the sequences to perform a distribution analysis. In order to prevent removing short sequences (in case SSR does not precede NHHR in the applied pipe), sequences shorter than 65% (overrule by `p2`) of the reference sequence are excluded from this analysis. It determines the mean and the standard deviation of all the data in the array.
-Finally, it determines which sequences score below and which above the threshold, set at 3σ, and saves removed and accepted sequences separately, accepted sequences are aligned. NHHR is not iterated since its objective is to remove sequences that are not homologous and will be removed in a single screening, under the assumption that they score low. The additional output consists a file that contains the accession codes of the removed sequences, the hmmsearch ouputs and a plot that shows a distribution of the calculated scores with the applied cut-off threshold.
-Threshold settings can be overruled. Any value alpha can be used for the sigma rule (`a2`). Alternatively, the cut-off can be based on interquartiles (`s2`). The Inter Quartile Range or IQR is defined as the difference between the middle of the first half of the sequence scores and the middle of the second half of the sequence scores. This provides another measure that is often used to define outliers, such as the lower 1.5 * Inter Quartile Range (IQR) whisker (< `Q1 – 1.5 x IQR`).
+Finally, it determines which sequences score below and which above the threshold and saves removed and accepted sequences separately (the latter are subsequently aligned). NHHR is not iterated since its objective is to remove sequences that are not homologous and will be removed in a single screening, under the assumption that they score low. The additional output consists a file that contains the accession codes of the removed sequences, the hmmsearch ouputs and a plot that shows a distribution of the calculated scores with the applied cut-off threshold.
+Threshold settings can be overruled. By default, it uses 1.5 * Inter Quartile Range (IQR) whisker (< `Q1 – 1.5 x IQR`). The Inter Quartile Range or IQR is defined as the difference between the middle of the first half of the sequence scores and the middle of the second half of the sequence scores. Using argument `-s2`, the threshold can be modified to use the average score - alpha * st. dev. The alpha value is set to 3 by default (σ3), but can be modified using argument `-a2`. 
 
 #### Module 3: The Gap Instigator Remover
 GIR removes sequences that instigate large (>29, overrule using `aa3`) gaps as detected in the offered MSA. This comes with two uncertainties of which only the firts one is tackled automatically. A “sequence-specific insert” does in general not instigate the same gap in all other sequences. Since the subsequence of the insert contains information that is used by MAFFT in the MSA reconstruction, residues and or subsequences from other sequences will be aligned to the sequence-specific insert. As such, we define the majority gap column, where majority means > 90% (overule by `p3`) of the sequences. GIR determines which columns are majority gap columns, subsequently scans the MSA and computes the number of continuous regions of majority gap columns. Secondly, in complex cases one or more conserved residues may align somewhere in the instigated gap, thereby splitting it in two smaller gaps. GIR makes two counts. The continuous gap score resembles the local alignment score: it sums up as the majority gap continues, but drops to zero when a normal column is encountered. The combined gap score resembles the global alignment score: it sums and simply distracts each normal column that is encountered. The continuous gap score is used for the automated identification of GIR-NFH. The combined gap score is merely reported as part of the graphical output that is generated for each iteration and as is described in the main text. It can be used for the manual removal of additional sequences. GIR removes the sequence that has the gap with the highest continuous gap score above the threshold and saves and aligns the remaining sequences in order to iterate the procedure. By default GIR is a one-by-one (overrule `m3`) sequence remover with iteration.
@@ -127,8 +130,7 @@ CGSR removes sequences that have one or more large continuous gaps detected in t
 As a final remark, similar to what can happen to a sequence-specific insert, sequence-specific deletions can result in the misalignment of one or more residues that flank the deletion. As a result, such deletions can appear as split which impedes their detection. This problem is not tackled since the solution similar to that was used for GIR (combined gap score) tends to identify many loop regions and leads to many false positives.
 
 #### Module 5: The Pseudogene Remover
-The pseudogene remover is the same outlier remover as NHHR except that it is iterated.  PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default σ3, it presents the σ2 threshold, the upper `1.5*IQR` whisker (> `Q3 + 1.5 IQR`) and the major score-drop Δmax as putative cut-off threshold. Application of the major score drop corresponds to the idea that non-outliers (read functional homologues under functional constraint) evolve with similar evolutionary rates which results in a continuous HMMER score distribution whereas NFHs lack the constraint and will evolve faster and show much lower scores. In certain cases, the major score drop can sometimes detect this. Note however that the dataset supposedly contains sequences from various subfamilies that have somewhat different constraints and that this can also result in large score-drops. The more complex a superfamily is, the less reliable it is to use the largest score-drop as cut-off. Hence, the largest score drop should only be applied when it occurs at or near one of the other three thresholds.
-
+The pseudogene remover is the same outlier remover as NHHR except that it is iterated. PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default 1.5 * Inter Quartile Range (IQR) whisker (< `Q1 – 1.5 x IQR`), it can also use average - alpha * st. dev. (using `-s5`, σ3 by default) with a customizable alpha value (`-a5`)
 **Example:**
 ```bash
 python3 seqrutinator.py -f sample.fsa -m 1324 -p1 0.85 -m2 2 s2 2 -a2 5 -m3 2 -p3 0.8 -aa3 35 -p4 0.85
@@ -168,16 +170,16 @@ The additional script SeqYNet.py can be used to run Seqrutinator with multiple i
 
 **Alignments**. MUFASA and Seqrutinator use by default MAFFT G-INS-i:
 `mafft --reorder --maxiterate 1000 --retree 1 --globalpair <input.fsa> <output.faa>`
-MAFFT[^a]⁠ can be installed to most Linux systems using Synaptic or is otherwise available at the MAFFT website[^b]⁠.
-Note that MAFFT G-INS-i comes with a heavy computational cost. For very large datasets (e.g. > 500 sequences of ~400 aa) we recommend to use FAMSA[^c], which is an available option. FAMSA should be made executable in the same folder. FAMSA can be obtained from its Github repository[^d]⁠.
+MAFFT[^1]⁠ can be installed to most Linux systems using Synaptic or is otherwise available at the MAFFT website[^2]⁠.
+Note that MAFFT G-INS-i comes with a heavy computational cost. For very large datasets (e.g. > 500 sequences of ~400 aa) we recommend to use FAMSA[^3], which is an available option. FAMSA should be made executable in the same folder. FAMSA can be obtained from its Github repository[^4]⁠.
 
-**Block Mapping and Gathering of Entropy**[^f]⁠. The pipeline and modules execute the command
+**Block Mapping and Gathering of Entropy**[^5]⁠. The pipeline and modules execute the command
 `java -jar BMGE.jar -i <msa.faa> -h 0.8`
 Make sure the executable file BMGE.jar. By default, Seqrutinator assumes BMGE version used is 1 (either v 1.0 or 1.12).
-Note that the command uses standard settings except for the entropy that is set to 0.8. Note that the actual trimming is not performed. We recommend BMGE version 1 that can be obtained from the Pasteur Institute [^g]⁠. The jar-file should be in the same directory as where Seqrutinator is execute.
-Note, however, that version 2.0[^i] can also be used (set the argument BMGE version `-bv 2` if this is the case).
+Note that the command uses standard settings except for the entropy that is set to 0.8. Note that the actual trimming is not performed. We recommend BMGE version 1 that can be obtained from the Pasteur Institute  [^6]⁠. The jar-file should be in the same directory as where Seqrutinator is execute.
+Note, however, that version 2.0 [^7] can also be used (set the argument BMGE version `-bv 2` if this is the case).
 
-**HMMER**[^h]. Installation via Synaptic is available. The outlier removers use HMMER modules⁠ with the following commands:
+**HMMER** [^8]. Installation via Synaptic is available. The outlier removers use HMMER modules⁠ with the following commands:
 `hmmbuild --informat afa --amino <output.hmm> <input.faa>`
 `hmmsearch --noali –tblout <output.txt> <input.fsa>`
 
@@ -237,11 +239,12 @@ We recommend running the script before running the sensitive search with `MUFASA
 - Dependencies of Seqrutinator are indicated in the script.
 
 ## References
-1. K. Katoh and D. M. Standley, “MAFFT Multiple Sequence Alignment Software Version 7: Improvements in Performance and Usability,” Mol. Biol. Evol., vol. 30, no. 4, pp. 772–780, Apr. 2013, doi: 10.1093/molbev/mst010.
-2. https://mafft.cbrc.jp/alignment/server/.
-3. S. Deorowicz, A. Debudaj-Grabysz, and A. Gudys, “FAMSA: Fast and accurate multiple sequence alignment of huge protein families,” Sci. Rep., vol. 6, no. 1, pp. 1–13, Sep. 2016, doi: 10.1038/srep33964.
-4. https://github.com/refresh-bio/FAMSA/.
-5. A. Criscuolo and S. Gribaldo, “BMGE (Block Mapping and Gathering with Entropy): A new software for selection of phylogenetic informative regions from multiple sequence alignments,” BMC Evol. Biol., vol. 10, no. 1, pp. 1–21, Jul. 2010, doi: 10.1186/1471-2148-10-210/FIGURES/9.
-6. ftp://ftp.pasteur.fr/pub/gensoft/projects/BMGE/
-7. S. R. Eddy, “Accelerated Profile HMM Searches,” PLOS Comput. Biol., vol. 7, no. 10, p. e1002195, 2011, doi: 10.1371/JOURNAL.PCBI.1002195.
-8. https://gitlab.pasteur.fr/GIPhy/BMGE
+[^1]: K. Katoh and D. M. Standley, “MAFFT Multiple Sequence Alignment Software Version 7: Improvements in Performance and Usability,” Mol. Biol. Evol., vol. 30, no. 4, pp. 772–780, Apr. 2013, doi: 10.1093/molbev/mst010.
+[^2]: https://mafft.cbrc.jp/alignment/server/.
+[^3]: S. Deorowicz, A. Debudaj-Grabysz, and A. Gudys, “FAMSA: Fast and accurate multiple sequence alignment of huge protein families,” Sci. Rep., vol. 6, no. 1, pp. 1–13, Sep. 2016, doi: 10.1038/srep33964.
+[^4]: https://github.com/refresh-bio/FAMSA/.
+[^5]: A. Criscuolo and S. Gribaldo, “BMGE (Block Mapping and Gathering with Entropy): A new software for selection of phylogenetic informative regions from multiple sequence alignments,” BMC Evol. Biol., vol. 10, no. 1, pp. 1–21, Jul. 2010, doi: 10.1186/1471-2148-10-210/FIGURES/9.
+[^6]: ftp://ftp.pasteur.fr/pub/gensoft/projects/BMGE/
+[^7]: https://gitlab.pasteur.fr/GIPhy/BMGE
+[^8]: S. R. Eddy, “Accelerated Profile HMM Searches,” PLOS Comput. Biol., vol. 7, no. 10, p. e1002195, 2011, doi: 10.1371/JOURNAL.PCBI.1002195.
+
