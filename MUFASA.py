@@ -28,7 +28,7 @@ parser.add_argument('-i', default='hmm_profile', help='HMMER profile, default = 
 parser.add_argument('-ext', default='*.fsa', help='Target files extension. default = *.fsa')
 parser.add_argument('-c', default=4, help='Cores, default = 4')
 parser.add_argument('-r', default='', help='Reference sequence for mafft-add and trimming (must be in fasta format)')
-parser.add_argument('-t', default='5-400', help='Trimming N- and C-end based on reference sequence (indexes will be conserved)')
+parser.add_argument('-t', default='5-400', help='Trimming N- and C-end based on reference sequence (residues corresponding to the provided indexes are retained)')
 
 args = vars(parser.parse_args())
 
