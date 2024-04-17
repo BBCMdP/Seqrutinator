@@ -12,9 +12,6 @@
 # Authors:                                                                    #
 #     Nicolas Stocchi, Agustin Amalfitano, Fernando Villareal, Marcelo        #
 #     Atencio, Arjen ten Have                                                 #
-#                                                                             #
-# Version release:                                                            #
-#     version 2024-03-25 revised by FV                                        #
 ###############################################################################
 
 
