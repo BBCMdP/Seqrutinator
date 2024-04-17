@@ -4,7 +4,7 @@
 ###############################################################################
 #                         Script Description                                  #
 # name:                                                                       #
-#     seqrutinator_v02gamma.py                                                #
+#     seqrutinator.py                                                         #
 #                                                                             #
 # description:                                                                #
 #     Automatic protein superfamily analysis                                  #
@@ -12,11 +12,6 @@
 # Authors:                                                                    #
 #     Nicolas Stocchi, Agustin Amalfitano, Fernando Villareal, Marcelo        #
 #     Atencio, Arjen ten Have                                                 #
-#                                                                             #
-# Version release:                                                            #
-#     version 02gamma 2022-07-05                                              #
-#     version 02delta 2022-09-14 (name issues corrected)                      #
-#     version 02epsilon 2022-12-14 (output file standardized                  #
 ###############################################################################
 
 # libraries
