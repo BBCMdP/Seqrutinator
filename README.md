@@ -2,7 +2,6 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10980626.svg)](https://doi.org/10.5281/zenodo.10980626)
 
-
 - [Seqrutinator](#seqrutinator)
   - [Introduction](#introduction)
   - [MUFASA (MUltiple FASta Aligner)](#mufasa-multiple-fasta-aligner)
@@ -18,9 +17,17 @@
       - [Module 4: The Continuous Gap Sequence Remover](#module-4-the-continuous-gap-sequence-remover)
       - [Module 5: The Pseudogene Remover](#module-5-the-pseudogene-remover)
   - [SeqYNet](#seqynet)
-    - [Materials and Methods](#materials-and-methods)
-    - [Usage](#usage-2)
-    - [Options](#options-2)
+    - [Materials, Methods and Requirements](#materials-methods-and-requirements)
+  - [Auxiliary scripts](#auxiliary-scripts)
+    - [Sequence renamer (seq\_renamer)](#sequence-renamer-seq_renamer)
+      - [Usage](#usage-2)
+      - [Options](#options-2)
+      - [Requirements](#requirements)
+    - [Sequence Non-IUPAC Purge script (SNIP)](#sequence-non-iupac-purge-script-snip)
+      - [Introduction](#introduction-1)
+      - [Requirements](#requirements-1)
+      - [Single fasta file](#single-fasta-file)
+      - [Multiple fasta files](#multiple-fasta-files)
   - [References](#references)
 
 Seqrutinator is an objective, flexible pipeline for the scrutiny of sequence sets from complex, eukaryotic protein superfamilies. It removes sequences from pseudogenes, incorrect gene models or with sequencing errors. Testing Seqrutinator on major superfamilies BAHD, CYP and UGT correctly removed 1.94% of SwissProt entries, 14% of entries from the model plant _Arabidopsis thaliana_ but 80% of entries from _Pinus taeda_’s recent complete proteome. Most of the removed sequences were partial. The scrutiny of BAHDomes, CYPomes and UGTomes obtained from 16 plant proteomes show consistent numbers suggesting good performance. MSAs, phylogenies and particularly functional clustering improved drastically upon Seqrutinator application.
@@ -166,7 +173,7 @@ At the end of each module seqrutinator performs a BMGE test that determines the 
 The additional script SeqYNet.py can be used to run Seqrutinator with multiple input files at once. Both scripts, the library and the set of fasta files, each prepared as explained, are to be placed in the same folder. All input files must have the extension fasta for running: The SeqYNet script comes with the same options and results for each fasta file will be saved in different subfolders, named on the base of the input fasta file.
 
 ---
-### Materials and Methods
+### Materials, Methods and Requirements
 
 **Alignments**. MUFASA and Seqrutinator use by default MAFFT G-INS-i:
 `mafft --reorder --maxiterate 1000 --retree 1 --globalpair <input.fsa> <output.faa>`
@@ -190,9 +197,9 @@ $ pip install -r requirements.txt
 ```
 
 
-#### _Auxiliary script_
+## Auxiliary scripts
 
-**seq_renamer.py**
+### Sequence renamer (seq_renamer)
 
 Available at https://github.com/BBCMdP/Sequence-renamer
 
@@ -205,12 +212,12 @@ To overcome this, here we provide the script `seq_renamer.py` which allows the r
 ```bash
 $ python3 seq_renamer.py -h
 ```
-### Usage
+#### Usage
 ```bash
 seq_renamer.py [-h] [-i I] [-id ID]
 ```
 
-### Options
+#### Options
 ```bash
   -h, --help  show this help message and exit
   -i I        Fasta file
@@ -242,10 +249,85 @@ eco0000002 	 WP_000478195.1 MULTISPECIES: DUF3302 domain-containing protein [Ent
 eco0000003 	 WP_000543457.1 MULTISPECIES: 2,3-dihydroxyphenylpropionate/2,3-dihydroxicinnamic acid 1,2-dioxygenase [Bacteria]
 eco0000004 	 WP_000291549.1 MULTISPECIES: lactose permease [Bacteria]
 ```
-We recommend running the script before running the sensitive search with `MUFASA`. `seq_renamer.py` requires Biopython.
+We recommend running the script before running the sensitive search with `MUFASA`. 
+#### Requirements
+`seq_renamer.py` requires Biopython.
 
-- Dependencies of Seqrutinator are indicated in the script.
+### Sequence Non-IUPAC Purge script (SNIP)
 
+[![DOI](https://zenodo.org/badge/788514656.svg)](https://zenodo.org/doi/10.5281/zenodo.10994866)
+
+Available at https://github.com/BBCMdP/SNIP
+
+#### Introduction 
+
+A common issue derived from poorly annotated genomes is that resulting proteomes may come with characters that do not correspond to actual amino acids commonly found in natural proteins (what we define here as non-IUPAC characters). 
+The most common scenario is the low definition of bases in the genome, typically annotated as nucleotide "N", for which translation of the predicted coding sequence may lead to an undefined residue, often times represented with symbol "X" in the protein sequence. 
+
+Some downstream applications (even MSA generation, profile to sequence comparisons, and even phylogeny reconstruction) can't deal with for non-IUPAC characters, and results are compromised. Moreover, some proteomes show a high "contamination" with non-IUPAC annotations, making this a problem that can easily become a nuissance. In addition, stop codon character * is typically found in complete proteome annotations, and can also interfere with several downstream applications.  
+
+In order to purge the protein datasets from sequences with non-IUPAC annotations, we have developed the Sequence Non-IUPAC Purge script, SNIP. SNIP is a python script that can deal with single or multiple fasta files, to automatically detect and remove sequences with non-IUPAC characters. SNIP do accept gap characters (such as "-" or "."), so either aligned or unaligned fasta files are accepted. The script will also process terminal stop codon character "*", and specifically remove it from the sequence. Note, however, that if a non terminal stop codon character is found in a sequence, it will be considered as non-IUPAC character, resulting in the removal of the sequence.
+
+>**We recommend applying this script before to run MuFasA and Seqrutinator.** 
+
+#### Requirements
+
+SNIP requires Biopython, and accepts by argument either single (`-s`) or multiple (`-m`) fasta files. For multiple file, it is required that all of them have the same extension. 
+
+#### Single fasta file
+The output will depend on the results. If running a single fasta file:
+
+`python3 SNIP.py -s input.fasta` 
+
+and sequences with non-IUPAC characters are found, two output fasta files will be generated: `input_accepted.fasta` and `input_removed.fasta`. Of course, each file includes the sequences without and with non-IUPAC characters, respectively. The terminal will print out the amount of sequences (total, accepted and removed). It will also show which is the non-IUPAC character found for each removed sequence.
+
+```
+Results for file input.fasta
+Total seqs:  65809
+Accepted seqs:  65368
+Removed seqs:  441
+```
+Note, in addition, that sequences in both files will not have terminal stop codon character "*".
+
+Now, if no sequences with non-IUPAC characters are found, but terminal stop codons are detected, the resulting sequences, without these characters, will be written in a new file with extension `_nsc.fasta` (from no stop codons).
+
+Finally, if neither non-IUPAC or terminal stop codon characters are found, only a printout in terminal is shown expliciting it (no further files are written). 
+
+#### Multiple fasta files
+SNIP can be applied to multiple fasta files. The only requirements are that all files should (i) be in the same folder, and (ii) have the same extension. For example, can be run like this: 
+
+`python3 SNIP.py -m '*.fa`  
+
+in a folder with five fasta files with the provided extension:
+
+```
+SNIP.py
+sfa.fa
+crh.fa
+smu.fa
+tpl.fa
+cri.fa
+```
+
+Will produce two folders, `/Seqs_Accepted` and `/Seqs_Removed`, plus a summary file `Report_multiple_files.tsv`. The files generated are the same and created conditionally as described before. The difference is that all files `*_removed.fa` will be moved to the `/Seqs_Removed` folder (if any). The `*_accepted.fa` and `*_ncs.fa` (if any) are moved to `/Seqs_Accepted`, as well as all files that were not modified by the script. This is to simplify the output recovery for the user. 
+
+The `Report_multiple_files.tsv` summarizes the results, for example:
+
+| File           | Total_Seqs | Seqs_accepted | Seqs_removed | term_* |
+|----------------|------------|---------------|--------------|--------|
+| crh.fa         | 19527      | 19514         | 13           | yes    |
+| cri.fa | 75253      | 75253         | 0            | yes    |
+| sfa.fa | 45611      | 45611         | 0            | no     |
+| smu.fa | 27137      | 24567         | 2570         | no     |
+| tpl.fa | 65809      | 65368         | 441          | yes    |
+> The column term_* indicates if terminal stop codon characters were found
+
+The user can identify here that for input file `crh.fa` has 19527 seqs, of which 13 have non-IUPAC characters (and are removed), and terminal stop codon characters were found. Thus, `crh_accepted.fa` and `crh_removed.fa` files are created and saved in the proper folder. The same goes for `smu.fa` (note that around 10% of the sequences have non-IUPAC characters) and `tpl.fa`. 
+The case of `cri.fa` will result in a file `cri_nsc.fa`, since there were no sequences with non-IUPAC characters, but terminal stop codons were found. 
+Finally, a copy of `sfa.fa` will be found in the `/Seqs_Accepted` folder, since neither non-IUPAC or terminal stop codons were found. 
+
+
+  
 ## References
 [^1]: K. Katoh and D. M. Standley, “MAFFT Multiple Sequence Alignment Software Version 7: Improvements in Performance and Usability,” Mol. Biol. Evol., vol. 30, no. 4, pp. 772–780, Apr. 2013, doi: 10.1093/molbev/mst010.
 [^2]: https://mafft.cbrc.jp/alignment/server/.
