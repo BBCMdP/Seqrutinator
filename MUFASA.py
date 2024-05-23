@@ -36,11 +36,10 @@ hmm_profile = str(args['i'])
 ext = str(args['ext'])
 cores = int(args['c'])
 refseq = str(args['r'])
-trimming = str(args['t'].split('-'))
-
-n_end = int(trimming[0]) + 1
+trimming = (args['t'].split('-'))
+trimming = [int(x) for x in trimming]
+n_end = int(trimming[0])
 c_end = int(trimming[1]) 
-
 
 ### Logging ###################################################################
 logger = logging.getLogger('MUFASA')
@@ -226,22 +225,22 @@ print('List of fasta loaded - Total time: ' +
 str((datetime.now() - startTime)))
 ###############################################################################
 
-list_of_hmms = []
+profile_name = hmm_profile.split(".")[0]
 
-os.system("mkdir Results_MUFASA")
-dst = path + "/Results_MUFASA"
-os.system("mkdir Results_MUFASA/hmmsearch")
-hst = path + "/Results_MUFASA/hmmsearch"
-os.system("mkdir Results_MUFASA/MAFFT")
-mst = path + "/Results_MUFASA/MAFFT"
-os.system("mkdir Results_MUFASA/Hits")
-hht = path + "/Results_MUFASA/Hits"
+dst = path + "/Results_MUFASA_" + str(profile_name)
+os.system("mkdir " + str(dst))
+hst = dst + "/hmmsearch"
+os.system("mkdir " + str(hst))
+mst = dst + "/MAFFT"
+os.system("mkdir " + str(mst))
+hht = dst + "/Hits"
+os.system("mkdir " + str(hht))
 
 if refseq != '':
-    os.system("mkdir Results_MUFASA/MAFFT_add")
-    ast = path + "/Results_MUFASA/MAFFT_add"
-    os.system("mkdir Results_MUFASA/reference_trimmed")
-    tst = path + "/Results_MUFASA/reference_trimmed"
+    ast = dst + "/MAFFT_add"
+    os.system("mkdir " + str(ast))
+    tst = dst + "/reference_trimmed"
+    os.system("mkdir " + str(tst))
 
 f1 = open("Hits_summary.tsv", "w")
 f1.write("Fasta\tTotal_Seq\tSeq_Detected\n")
