@@ -26,6 +26,7 @@ path = os.path.dirname(os.path.abspath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', default='hmm_profile', help='HMMER profile, default = hmm_profile')
 parser.add_argument('-ext', default='*.fsa', help='Target files extension. default = *.fsa')
+parser.add_argument('-a', default='y', help='Align hits with MAFFT? Use y (default) or n')
 parser.add_argument('-c', default=4, help='Cores, default = 4')
 parser.add_argument('-r', default='', help='Reference sequence for mafft-add and trimming (must be in fasta format)')
 parser.add_argument('-t', default='5-400', help='Trimming N- and C-end based on reference sequence (residues corresponding to the provided indexes are retained)')
@@ -34,6 +35,7 @@ args = vars(parser.parse_args())
 
 hmm_profile = str(args['i'])
 ext = str(args['ext'])
+align = str(args['a'])
 cores = int(args['c'])
 refseq = str(args['r'])
 trimming = (args['t'].split('-'))
@@ -191,6 +193,9 @@ def process_sequences(fasta_file, start_pos, end_pos):
 
     return names, processed_seqs
 
+if align != 'y' and refseq != '':
+    print(f'If you want to perform MAFFT-add and reference trimming, -a must be set to "y"')
+    exit()
 
 list_of_fastas = input_files(ext)
 
@@ -231,10 +236,11 @@ dst = path + "/Results_MUFASA_" + str(profile_name)
 os.system("mkdir " + str(dst))
 hst = dst + "/hmmsearch"
 os.system("mkdir " + str(hst))
-mst = dst + "/MAFFT"
-os.system("mkdir " + str(mst))
 hht = dst + "/Hits"
 os.system("mkdir " + str(hht))
+if align == 'y':
+    mst = dst + "/MAFFT"
+    os.system("mkdir " + str(mst))
 
 if refseq != '':
     ast = dst + "/MAFFT_add"
@@ -274,8 +280,8 @@ for fasta in list_of_fastas:
     hits = list_reader(str(real_fasta) + "_hmms.txt")
 
     fetching(hits, fasta, str(real_fasta) + "_hits.fsa")
-
-    MAFFT_ginsi_c(str(real_fasta) + "_hits.fsa", real_fasta, cores)
+    if align == 'y':
+        MAFFT_ginsi_c(str(real_fasta) + "_hits.fsa", real_fasta, cores)
 
 
     # LOG #####################################################################
@@ -286,7 +292,6 @@ for fasta in list_of_fastas:
     ###########################################################################
 
 f1.close()
-
 
 if refseq != '':
 
@@ -342,7 +347,8 @@ os.system("mv *.log " + str(dst))
 if refseq != '':
     os.system("mv *_add.faa " + str(ast))
     os.system("mv *_trimmed.faa " + str(tst))
-os.system("mv *.faa " + str(mst))
+if align == 'y':
+    os.system("mv *.faa " + str(mst))
 
 # LOG #########################################################################
 logger.info('MUFASA finished - Total time: ' +
