@@ -32,7 +32,7 @@
 
 Seqrutinator is an objective, flexible pipeline for the scrutiny of sequence sets from complex, eukaryotic protein superfamilies. It removes sequences from pseudogenes, incorrect gene models or with sequencing errors. Testing Seqrutinator on major superfamilies BAHD, CYP and UGT correctly removed 1.94% of SwissProt entries, 14% of entries from the model plant _Arabidopsis thaliana_ but 80% of entries from _Pinus taeda_’s recent complete proteome. Most of the removed sequences were partial. The scrutiny of BAHDomes, CYPomes and UGTomes obtained from 16 plant proteomes show consistent numbers suggesting good performance. MSAs, phylogenies and particularly functional clustering improved drastically upon Seqrutinator application.
 
-Seqrutinator is under review but can be accessed as preprint at https://doi.org/10.1101/2022.03.22.485366
+Seqrutinator is published: Amalfitano A, Stocchi N, Atencio HM, Villarreal F, ten Have A. Seqrutinator: scrutiny of large protein superfamily sequence datasets for the identification and elimination of non-functional homologues. Genome Biology. 2024 Aug 26;25(1):230. DOI: 10.1186/s13059-024-03371-y.
 
 Below you will find the contents of Supplemental document 1, which is basically a detailed descripion of Seqrutinator and accompaying scripts. My apologies for the fact that the output tables are no really tables here
 
@@ -121,6 +121,9 @@ seqrutinator.py [-h] [-m M] [-f F] [-ali ALI] [-ref1 REF1] [-ref2 REF2] [-bv BV]
 ```
 
 ### Modules
+#### Graphical summary
+![summary_pipeline](https://github.com/user-attachments/assets/ea90e37e-5f07-44dc-822e-f96c9c912fdf)
+
 #### Module 1: The Short Sequence Remover Module
 SSR opens the offered fasta file and determines the length l of the first sequence,  the default reference sequence. This can be overruled by `ref1` or `ref2`. Next, it determines the length of each sequence and separately saves good and bad sequences using the default threshold of `0.65*l`, which can be overruled by `p1`. Good sequences are aligned by MAFFT G-INS-i. The additional output consists of a file that contains the accession codes of the removed sequences and a file that shows the inclusion threshold and the lengths of the removed sequences.
 
@@ -138,6 +141,7 @@ As a final remark, similar to what can happen to a sequence-specific insert, seq
 
 #### Module 5: The Pseudogene Remover
 The pseudogene remover is the same outlier remover as NHHR except that it is iterated. PR comes with optional settings for the determination of the cut-off and provides a graph that, besides the score plot, contains a plot for the score-drops between two consecutive hits in the HMMER search (delta-score) as well as four putative cut-offs. Besides the default 1.5 * Inter Quartile Range (IQR) whisker (< `Q1 – 1.5 x IQR`), it can also use average - alpha * st. dev. (using `-s5`, σ3 by default) with a customizable alpha value (`-a5`)
+
 **Example:**
 ```bash
 python3 seqrutinator.py -f sample.fsa -m 1324 -p1 0.85 -m2 2 s2 2 -a2 5 -m3 2 -p3 0.8 -aa3 35 -p4 0.85
